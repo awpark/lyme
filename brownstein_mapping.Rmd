@@ -1,0 +1,46 @@
+---
+title: "Mapping current and future distribution of _Ixodes scapularis_ in the US"
+author: "Andrew Park"
+date: "5/17/2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+```{r load_libs, message=F, warning=F}
+library(ggplot2)
+library(readr)
+library(ggmap)
+library(maps)
+library(stringr)
+library(magrittr)
+library(choroplethr)
+library(dplyr)
+```
+
+```{r read_data}
+countyTick <- read_csv("./data/TICK/countyTick.csv")
+```
+
+```{r load_maps}
+countyMap <- map_data("county")
+stateMap <- map_data("state")
+```
+
+```{r manip_dfs}
+countyTick %<>% mutate(subregion=str_to_lower(County))
+countyTick %<>% mutate(region=str_to_lower(State))
+tickMap <- inner_join(countyMap,countyTick)
+```
+
+```{r plot}
+myColors=c("white","blue","red","tan","black")
+
+ggplot(tickMap,aes(x=long,y=lat,group=group)) +
+  geom_polygon(col="black",lwd=0.1,aes(fill=factor(Tick_presence))) +
+  scale_fill_manual(values=myColors) +
+  expand_limits(x=tickMap$long,y=tickMap$lat) +
+  coord_map("polyconic") +
+  labs(fill="Tick Code")
+```
+
+legend: 1=absent, 2=present only, 3=future only, 4=present and future
