@@ -1,0 +1,71 @@
+---
+title: "Lyme Disease"
+author: "Jenna Lea"
+date: "May 16, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#PRISM uses image-based file storage, which means we need to work with two file types:
+
+#`bil` files (band interleaved by lines)
+#`hdr` files (associated header file)
+
+##Minimum Temperatures
+
+```{r}
+filenames<-list.files("./DATA/PRISM/MinTemp")
+filenames<-filenames[grep(".*\\.bil$",filenames)]
+filenames<-gsub("PRISM","\\./DATA/PRISM/MinTemp/PRISM",filenames)
+
+
+mean2<-function(x){return(mean(x,na.rm=T))}
+US_Counties<-readShapePoly("./DATA/US/US_County_2000_2004_geo")
+US_Counties_Polygons<-as(US_Counties,"SpatialPolygons")
+
+#MinTemp
+r<-raster(filenames[1])
+z<-raster::extract(r,US_Counties_Polygons)
+prcp<-as.data.frame(cbind(rep(2000,length(US_Counties$FIPSNum)),US_Counties$FIPSNum,unlist(lapply(z,mean2))))
+names(prcp)<-c("year","fips","av")
+
+for (i in 2:16){
+  r<-raster(filenames[i])
+  this.year<-i+1999
+  z<-raster::extract(r,US_Counties_Polygons)
+  tmp<-as.data.frame(cbind(rep(this.year,length(US_Counties$FIPSNum)),US_Counties$FIPSNum,unlist(lapply(z,mean2))))
+  names(tmp)<-c("year","fips","av")
+  MinTemp<-rbind(MinTemp,tmp)
+}
+```
+
+##Maximum Temperatures
+```{r}
+filenames<-list.files("./DATA/PRISM/MaxTemp")
+filenames<-filenames[grep(".*\\.bil$",filenames)]
+filenames<-gsub("PRISM","\\./DATA/PRISM/MaxTemp/PRISM",filenames)
+
+
+mean2<-function(x){return(mean(x,na.rm=T))}
+US_Counties<-readShapePoly("./DATA/US/US_County_2000_2004_geo")
+US_Counties_Polygons<-as(US_Counties,"SpatialPolygons")
+
+#MinTemp
+r<-raster(filenames[1])
+z<-raster::extract(r,US_Counties_Polygons)
+prcp<-as.data.frame(cbind(rep(2000,length(US_Counties$FIPSNum)),US_Counties$FIPSNum,unlist(lapply(z,mean2))))
+names(prcp)<-c("year","fips","av")
+
+for (i in 2:16){
+  r<-raster(filenames[i])
+  this.year<-i+1999
+  z<-raster::extract(r,US_Counties_Polygons)
+  tmp<-as.data.frame(cbind(rep(this.year,length(US_Counties$FIPSNum)),US_Counties$FIPSNum,unlist(lapply(z,mean2))))
+  names(tmp)<-c("year","fips","av")
+  MaxTemp<-rbind(MaxTemp,tmp)
+}
+
+```
