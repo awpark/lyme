@@ -29,7 +29,14 @@ stateMap <- map_data("state")
 ```{r manip_dfs}
 countyTick %<>% mutate(subregion=str_to_lower(County))
 countyTick %<>% mutate(region=str_to_lower(State))
-tickMap <- inner_join(countyMap,countyTick)
+
+countyTick %<>% mutate(subregion=str_replace_all(subregion,"st\\.","st"))
+countyTick %<>% mutate(subregion=str_replace_all(subregion,"ste\\.","ste"))
+countyTick %<>% mutate(subregion=str_replace_all(subregion,"o'brien","obrien"))
+countyTick %<>% mutate(subregion=str_replace_all(subregion,"mountrial","mountrail"))
+countyTick %<>% mutate(subregion=str_replace_all(subregion,"miami dade","miami-dade"))
+
+tickMap <- full_join(countyMap,countyTick) %>% na.omit
 ```
 
 ```{r plot}
