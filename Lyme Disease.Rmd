@@ -8,6 +8,7 @@ output: word_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+Only running 2000 and 2015
 
 #PRISM uses image-based file storage, which means we need to work with two file types:
 
@@ -40,7 +41,7 @@ for (i in 2:16){
   z<-raster::extract(r,US_Counties_Polygons)
   tmp<-as.data.frame(cbind(rep(this.year,length(US_Counties$FIPSNum)),US_Counties$FIPSNum,unlist(lapply(z,mean2))))
   names(tmp)<-c("year","fips","av")
-  min_temp<-rbind(min_temp,tmp)
+  MinTemp<-rbind(min_temp,tmp)
 }
 
 ```
@@ -71,7 +72,7 @@ for (i in 2:16){
   y<-raster::extract(s,US_Counties_Polygons)
   tmp1<-as.data.frame(cbind(rep(this.year,length(US_Counties$FIPSNum)),US_Counties$FIPSNum,unlist(lapply(y,mean2))))
   names(tmp1)<-c("year","fips","av")
-  max_temp<-rbind(max_temp,tmp1)
+  MaxTemp<-rbind(max_temp,tmp1)
 }
 
 ```
