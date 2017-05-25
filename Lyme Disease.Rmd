@@ -41,7 +41,7 @@ for (i in 2:16){
   z<-raster::extract(r,US_Counties_Polygons)
   tmp<-as.data.frame(cbind(rep(this.year,length(US_Counties$FIPSNum)),US_Counties$FIPSNum,unlist(lapply(z,mean2))))
   names(tmp)<-c("year","fips","av")
-  MinTemp<-rbind(min_temp,tmp)
+  min_temp<-rbind(min_temp,tmp)
 }
 
 ```
