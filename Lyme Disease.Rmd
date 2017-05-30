@@ -1,15 +1,13 @@
 ---
 title: "Lyme Disease"
 author: "Jenna Lea"
-date: "5/20/2017"
+date: "5/25/2017"
 output: word_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-Only running 2000 and 2015
-
 #PRISM uses image-based file storage, which means we need to work with two file types:
 
 #`bil` files (band interleaved by lines)
@@ -72,7 +70,7 @@ for (i in 2:16){
   y<-raster::extract(s,US_Counties_Polygons)
   tmp1<-as.data.frame(cbind(rep(this.year,length(US_Counties$FIPSNum)),US_Counties$FIPSNum,unlist(lapply(y,mean2))))
   names(tmp1)<-c("year","fips","av")
-  MaxTemp<-rbind(max_temp,tmp1)
+  max_temp<-rbind(max_temp,tmp1)
 }
 
 ```
@@ -84,3 +82,107 @@ write.csv(min_temp,file="MinTemp")
 write.csv(max_temp,file="MaxTemp")
 
 ```
+
+##Read in additional data
+```{r}
+#CDC data
+ld<-read_csv("./data/CDC/ld-case-counts-by-county-00-15.csv")
+
+#Census
+pop<-read_csv("./data/CENSUS/county_population.csv")
+
+#Load all PRISM data
+load("get_PRISM.Rda")
+mintemp<-read.csv("MinTemp")
+maxtemp<-read.csv("MaxTemp")
+
+#Remove X column
+mintemp$X<-NULL
+maxtemp$X<-NULL
+
+```
+
+##Pop TidyVerse Conversion
+
+```{r}
+
+library(tidyr)
+library(magrittr)
+
+require(tidyr)
+require(magrittr)
+
+pop %<>% select(fips,starts_with("pop2"))
+pop %<>% gather(starts_with("pop2"),key="str_year",value="size") %>% na.omit
+pop %<>% mutate(year=gsub("pop","",str_year))
+pop %<>% mutate(year=as.numeric(year))
+pop %<>% mutate(fips=gsub("^0","",fips))
+pop %<>% mutate(fips=as.integer(fips))
+pop$str_year<-NULL
+names(pop)[names(pop) == 'size'] <- 'pop'
+```
+
+##LD TidyVerse Conversion
+
+```{r}
+ld %<>% gather(starts_with("Cases"),key="str_year",value="cases") 
+ld %<>% mutate(year=gsub("Cases","",str_year)) 
+ld %<>% mutate(year=as.numeric(year))
+ld %<>% rename(state=STNAME,county=CTYNAME)
+
+fips.builder<-function(st,ct){
+  if (nchar(ct)==3){
+    fips<-paste(as.character(st),as.character(ct),sep="") %>% as.integer
+  }
+  else if (nchar(ct)==2){
+    fips<-paste(as.character(st),"0",as.character(ct),sep="") %>% as.integer
+  }
+  else {
+    fips<-paste(as.character(st),"00",as.character(ct),sep="") %>% as.integer
+  }
+  return(fips)
+}
+
+ld %<>% rowwise() %>% mutate(fips=fips.builder(STCODE,CTYCODE)) 
+
+ld %<>% select(-c(STCODE,CTYCODE,str_year))
+
+```
+
+##Merge all data frames
+
+```{r}
+#Join prism prcp and avtmp with ld 
+ld.prism<-inner_join(ld,prism)
+#Join with mintemp and rename av column to mintmp
+ld.prism.min<-inner_join(ld.prism,mintemp)
+names(ld.prism.min)[names(ld.prism.min) == 'av'] <- 'mintmp'
+#Join with maxtemp and rename av column to maxtmp
+ld.total<-inner_join(ld.prism.min,maxtemp)
+names(ld.total)[names(ld.total) == 'av'] <- 'maxtmp'
+#Join with pop
+ld.pop<-inner_join(ld.total,pop)
+
+## CENSES data only goes until 2014, so obs go from 49744 to 46630
+
+```
+
+##countyTick
+
+```{r}
+#countyTick data frame lists only county name, ld.total lists "County" following county name
+ld.total$County<-gsub("County","",ld.total$County) 
+
+#Need to remove some unecessary columns, only need first 3 and tick_presence
+countyTick$State_FIPS<-NULL
+countyTick$County_FIPS<-NULL
+countyTick$fipsname<-NULL
+countyTick$polyname<-NULL
+
+#Compare countyTick and ld.total county names to ensure congruence for final merge: countyTick contains 3080 obs, so missing 29 counties, rename county and state to County and State
+
+names(ld.total)[names(ld.total) == 'county'] <- 'County'
+names(ld.total)[names(ld.total) == 'state'] <- 'State'
+```
+
+
