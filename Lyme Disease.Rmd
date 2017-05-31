@@ -86,6 +86,7 @@ write.csv(max_temp,file="MaxTemp")
 ##Read in additional data
 ```{r}
 #CDC data
+library(readr)
 ld<-read_csv("./data/CDC/ld-case-counts-by-county-00-15.csv")
 
 #Census
@@ -109,8 +110,6 @@ maxtemp$X<-NULL
 library(tidyr)
 library(magrittr)
 
-require(tidyr)
-require(magrittr)
 
 pop %<>% select(fips,starts_with("pop2"))
 pop %<>% gather(starts_with("pop2"),key="str_year",value="size") %>% na.omit
@@ -170,8 +169,14 @@ ld.pop<-inner_join(ld.total,pop)
 ##countyTick
 
 ```{r}
+#Compare countyTick and ld.total county names to ensure congruence for final merge: countyTick contains 3080 obs, so missing 29 counties, rename county and state to County and State
+
+names(ld.total)[names(ld.total) == 'county'] <- 'County'
+names(ld.total)[names(ld.total) == 'state'] <- 'State'
+
+countyTick<-read_csv("./data/TICK/countyTick.csv")
 #countyTick data frame lists only county name, ld.total lists "County" following county name
-ld.total$County<-gsub("County","",ld.total$County) 
+ld.total$County<-gsub(" County","",ld.total$County) 
 
 #Need to remove some unecessary columns, only need first 3 and tick_presence
 countyTick$State_FIPS<-NULL
@@ -179,10 +184,46 @@ countyTick$County_FIPS<-NULL
 countyTick$fipsname<-NULL
 countyTick$polyname<-NULL
 
-#Compare countyTick and ld.total county names to ensure congruence for final merge: countyTick contains 3080 obs, so missing 29 counties, rename county and state to County and State
 
-names(ld.total)[names(ld.total) == 'county'] <- 'County'
-names(ld.total)[names(ld.total) == 'state'] <- 'State'
 ```
 
+##merging issues
+```{r}
+ld.total$SC<-paste(ld.total$County,ld.total$State,sep=",")
+countyTick$SC<-paste(countyTick$County,countyTick$State,sep=",")
+length(unique(ld.total$SC))
+length(unique(countyTick$SC))
+# e.g Baltimore - solution DO NOTHING Balt and Balt city are separalte locations
+tmp<-ld.total[grep("Baltimore",ld.total$SC),]
 
+#parrish - solution=GSUB
+tmp<-ld.total[grep("Parish",ld.total$SC),]
+
+# repeats in countyTick - solution:
+FIPScounter<-table(countyTick$fips)
+FIPScounter<-FIPScounter[FIPScounter>1]
+problemFIPS<-as.integer(names(FIPScounter))
+problemFIPS.locs<-NULL
+for (k in problemFIPS){
+  locs<-which(countyTick$fips==k)
+  locs<-locs[-1]
+  problemFIPS.locs<-c(problemFIPS.locs,locs)
+}
+countyTick<-countyTick[-problemFIPS.locs,]
+
+## VA cities - TO BE REVISITED: JL "CITY PROBABLY HAS HIGH CASE NUMBERS SO DON"T THROW DATA AWAY IF WE DON"T HAVE TO"
+tmp1<-subset(ld.total,year==2008 & State=="Virginia")
+tmp2<-subset(countyTick,State=="Virginia")
+setdiff(tmp1$County,tmp2$County)
+addCity<-setdiff(tmp2$County,tmp1$County)
+
+for (i in 1:dim(countyTick)[1]){
+  if (countyTick$State[i]=="Virginia"){
+    if (countyTick$County[i] %in% addCity){
+      countyTick$County[i]<-paste(countyTick$County[i],"city",sep=" ")
+    }
+  }
+}
+
+
+```
