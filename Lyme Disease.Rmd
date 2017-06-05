@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ##Minimum Temperatures
 
-```{r}
+```{r, eval=F}
 filenames<-list.files("./data/PRISM/min_temp")
 filenames<-filenames[grep(".*\\.bil$",filenames)]
 filenames<-gsub("PRISM","\\./data/PRISM/min_temp/PRISM",filenames)
@@ -46,7 +46,7 @@ for (i in 2:16){
 
 ##Maximum Temperatures
 
-```{r}
+```{r, eval=F}
 filenames<-list.files("./data/PRISM/max_temp")
 filenames<-filenames[grep(".*\\.bil$",filenames)]
 filenames<-gsub("PRISM","\\./data/PRISM/max_temp/PRISM",filenames)
@@ -77,7 +77,7 @@ for (i in 2:16){
 
 ##Convert dataframes to .csv
 
-```{r}
+```{r, eval=F}
 write.csv(min_temp,file="MinTemp")
 write.csv(max_temp,file="MaxTemp")
 
@@ -109,7 +109,7 @@ maxtemp$X<-NULL
 
 library(tidyr)
 library(magrittr)
-
+library(dplyr)
 
 pop %<>% select(fips,starts_with("pop2"))
 pop %<>% gather(starts_with("pop2"),key="str_year",value="size") %>% na.omit
@@ -269,7 +269,9 @@ countyTick<-countyTick.add
 
 # Adding missing cities to countyTick
 newCity<-data.frame(fips=c(24510,29510,51510,51515,51520,51530,51540,51550,51570,51580,51590,51595,51600,51610,51620,51630,51640,51660,51670,51678,51680,51683,51685,51690,51720,51730,51735,51740,51750,51760,51770,51775,51790,51820,51830,51840),County=c("Baltimore city","St. Louis city","Alexandria city","Bedford city","Bristol city","Buena Vista city","Charlottesville city","Chesapeake city","Colonial Heights city","Covington city","Danville city","Emporia city","Fairfax city","Falls Church city","Franklin city","Fredericksburg city","Galax city","Harrisonburg city","Hopewell city","Lexington city","Lynchburg city","Manassas city","Manassas Park city","Martinsville city","Norton city","Petersburg city","Poquoson city","Portsmouth city","Radford city","Richmond city","Roanoke city","Salem city","Staunton city","Waynesboro city","Williamsburg city","Winchester city"),State=c("Maryland","Missouri","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia"),Tick_presence=c(2,1,2,1,1,2,2,2,2,1,2,1,1,1,2,2,2,2,2,2,2,2,2,1,1,1,2,1,2,2,2,2,2,2,1,2))
-  
+
+
+newCity$SC<-paste(newCity$County,newCity$State,sep=",")
 countyTick.add<-rbind(newCity,countyTick.add)
 countyTick<-countyTick.add
 
@@ -294,25 +296,5 @@ ld.tick.edit<-inner_join(ld.total,countyTick)
 ##Convert Tick_presence to 0 (1 or 3) or 1 (2 or 4)
 
 ```{r}
-# This works, but I'd like to figure out how to write it as a for and if function
-ld.tick$Presence_current<-ld.tick$Tick_presence
-ld.tick$Presence_current<-gsub("1","0",ld.tick$Presence_current)
-ld.tick$Presence_current<-gsub("3","0",ld.tick$Presence_current)
-ld.tick$Presence_current<-gsub("2","1",ld.tick$Presence_current)
-ld.tick$Presence_current<-gsub("4","1",ld.tick$Presence_current)
-
-
-#Attempts didn't return successful, column filled completely with 1's
-
-ld.tick.edit$Presence_current<-1
-
-for(i in 1:dim(ld.tick.edit)[1]){
-  if (ld.tick.edit$Tick_presence[i]=="1"){
-    if (ld.tick.edit$Tick_presence[i]=="3"){
-      ld.tick.edit$Presence_current<-0
-        
-    }
-  }
-} 
-  
+ld.tick$Presence_current<-ifelse(ld.tick$Tick_presence%in%c(1,3),0,1)
 ```
