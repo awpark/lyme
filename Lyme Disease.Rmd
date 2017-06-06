@@ -294,7 +294,7 @@ ld.tick.edit<-inner_join(ld.total,countyTick)
 ##Convert Tick_presence to 0 (1 or 3) or 1 (2 or 4)
 
 ```{r}
-# This works, but I'd like to figure out how to write it as a for and if function
+# This works, but I'd like to figure out how to write it as a for and if loop
 ld.tick$Presence_current<-ld.tick$Tick_presence
 ld.tick$Presence_current<-gsub("1","0",ld.tick$Presence_current)
 ld.tick$Presence_current<-gsub("3","0",ld.tick$Presence_current)
