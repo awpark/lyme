@@ -2,7 +2,9 @@
 title: "Lyme Disease"
 author: "Jenna Lea"
 date: "5/25/2017"
-output: word_document
+output:
+  html_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -302,4 +304,44 @@ ld.tick$Presence_current<-ld.tick$Tick_presence
 ld.tick$Presence_current<-ifelse(ld.tick$Presence_current%in%c(1,3),0,1)
 
 ```
+
+
+#Preliminary analysis
+
+
+##Do cases occur only where ticks are present?
+
+```{r}
+ld.tick %>% filter(cases>0) %>% ggplot(aes(x=as.factor(Presence_current),y=cases))+geom_boxplot()+scale_y_log10()
+
+```
+
+Follow-up Tasks
+
+* where do the 0 tick Lyme cases occur geographically
+* when do the same cases occur
+
+
+##How can we map cases
+
+```{r}
+
+library(maps)
+county_map<-map_data("county")
+ggplot(county_map,aes(x=long,y=lat,group=group))+geom_polygon(col="blue",fill=ifelse(county_map$group>1500,"red","green"))#+geom_path(lwd=0.1,col="red")
+
+county_map %<>% mutate(region=str_to_title(region))
+county_map %<>% mutate(subregion=str_to_title(subregion))
+county_map %<>% mutate(SC=paste(subregion,region,sep=","))
+
+ld.av <- aggregate(ld.tick$cases,by=list(ld.tick$SC),FUN=mean)
+names(ld.av)<-c("SC","av.cases")
+tmp<-inner_join(county_map,ld.av)
+
+ggplot(tmp,aes(x=long,y=lat,group=group,fill=log10(av.cases+1)))+geom_polygon()+scale_fill_continuous()+coord_map("polyconic")
+
+
+```
+
+
 
