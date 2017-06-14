@@ -193,15 +193,6 @@ countyTick$polyname<-NULL
 ##merging issues
 ```{r}
 ld.total$SC<-paste(ld.total$County,ld.total$State,sep=",")
-countyTick$SC<-paste(countyTick$County,countyTick$State,sep=",")
-length(unique(ld.total$SC))
-length(unique(countyTick$SC))
-
-# e.g Baltimore - solution DO NOTHING Balt and Balt city are separalte locations
-tmp<-ld.total[grep("Baltimore",ld.total$SC),]
-
-#parrish - solution=GSUB
-tmp<-ld.total[grep("Parish",ld.total$SC),]
 
 
 # repeats in countyTick - solution:
@@ -265,17 +256,18 @@ countyTick %<>% mutate(County=str_replace_all(County,"Fond Du Lac","Fond du Lac"
 # Adding missing counties to countyTick
 
 countyTick.add<-rbind(countyTick,c(55078,"Menominee","Wisconsin",2))
-countyTick.add<-rbind(countyTick,c(4012,"La Paz","Arizona",1))
-countyTick.add<-rbind(countyTick,c(8014,"Broomfield","Colorado",1))
+countyTick.add<-rbind(countyTick.add,c(4012,"La Paz","Arizona",1))
+countyTick.add<-rbind(countyTick.add,c(8014,"Broomfield","Colorado",1))
 countyTick<-countyTick.add
+
+countyTick$SC<-paste(countyTick$County,countyTick$State,sep=",")
 
 # Adding missing cities to countyTick
 newCity<-data.frame(fips=c(24510,29510,51510,51515,51520,51530,51540,51550,51570,51580,51590,51595,51600,51610,51620,51630,51640,51660,51670,51678,51680,51683,51685,51690,51720,51730,51735,51740,51750,51760,51770,51775,51790,51820,51830,51840),County=c("Baltimore city","St. Louis city","Alexandria city","Bedford city","Bristol city","Buena Vista city","Charlottesville city","Chesapeake city","Colonial Heights city","Covington city","Danville city","Emporia city","Fairfax city","Falls Church city","Franklin city","Fredericksburg city","Galax city","Harrisonburg city","Hopewell city","Lexington city","Lynchburg city","Manassas city","Manassas Park city","Martinsville city","Norton city","Petersburg city","Poquoson city","Portsmouth city","Radford city","Richmond city","Roanoke city","Salem city","Staunton city","Waynesboro city","Williamsburg city","Winchester city"),State=c("Maryland","Missouri","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia"),Tick_presence=c(2,1,2,1,1,2,2,2,2,1,2,1,1,1,2,2,2,2,2,2,2,2,2,1,1,1,2,1,2,2,2,2,2,2,1,2))
 
 
 newCity$SC<-paste(newCity$County,newCity$State,sep=",")
-countyTick.add<-rbind(newCity,countyTick.add)
-countyTick<-countyTick.add
+countyTick<-rbind(newCity,countyTick)
 
 setdiff(ld.total$County,countyTick$County)
 
@@ -291,7 +283,6 @@ countyTick$State<-as.character(countyTick$State)
 countyTick$Tick_presence<-as.numeric(countyTick$Tick_presence)
 
 ld.tick<-inner_join(ld.total,countyTick)
-ld.tick.edit<-inner_join(ld.total,countyTick)
 
 ```
 
@@ -299,7 +290,6 @@ ld.tick.edit<-inner_join(ld.total,countyTick)
 
 ```{r}
 
-# This works, but I'd like to figure out how to write it as a for and if loop
 ld.tick$Presence_current<-ld.tick$Tick_presence
 ld.tick$Presence_current<-ifelse(ld.tick$Presence_current%in%c(1,3),0,1)
 
@@ -316,32 +306,315 @@ ld.tick %>% filter(cases>0) %>% ggplot(aes(x=as.factor(Presence_current),y=cases
 
 ```
 
-Follow-up Tasks
-
-* where do the 0 tick Lyme cases occur geographically
-* when do the same cases occur
-
-
-##How can we map cases
-
+##County_map & ld.tick discrepencies
 ```{r}
-
 library(maps)
 county_map<-map_data("county")
-ggplot(county_map,aes(x=long,y=lat,group=group))+geom_polygon(col="blue",fill=ifelse(county_map$group>1500,"red","green"))#+geom_path(lwd=0.1,col="red")
-
 county_map %<>% mutate(region=str_to_title(region))
 county_map %<>% mutate(subregion=str_to_title(subregion))
+
+county_map %<>% mutate(subregion=str_replace_all(subregion,"De Kalb","DeKalb"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"St Clair","St. Clair"))  
+county_map %<>% mutate(subregion=str_replace_all(subregion,"St Francis","St. Francis"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"De Soto","DeSoto"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"St Johns","St. Johns"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"St Lucie","St. Lucie"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mcduffie","McDuffie"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mcintosh","McIntosh"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"La Salle","LaSalle"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mcdonough","McDonough"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mchenry","McHenry"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mclean","McLean"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Lagrange","LaGrange"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"La Porte","LaPorte"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"St Joseph","St. Joseph"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Obrien","O'Brien"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mcpherson","McPherson"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mccracken","McCracken"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mccreary","McCreary"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"St Bernard","St. Bernard"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"St Charles","St. Charles"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"St Helena","St. Helena"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"St James","St. James"))
+
+county_map %<>% mutate(subregion=str_replace_all(subregion,"St John The Baptist","St. John the Baptist"))
+
+county_map %<>% mutate(subregion=str_replace_all(subregion,"St Landry","St. Landry"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"St Martin","St. Martin"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"St Mary","St. Mary"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"St Tammany","St. Tammany"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Prince Georges","Prince George's"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Queen Annes","Queen Anne's"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"St. Marys","St. Mary's"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Baltimore City","Baltimore city"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Lac Qui Parle","Lac qui Parle"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Lake Of The Woods","Lake of the Woods"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mcleod","McLeod"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"St Louis","St. Louis"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mcdonald","McDonald"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"St Francois","St. Francois"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"St. Louis City","St. Louis city"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Ste Genevieve","Ste. Genevieve"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Lewis And Clark","Lewis and Clark"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mccone","McCone"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Yellowstone National","Yellowstone"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mckinley","McKinley"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"St Lawrence","St. Lawrence"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mcdowell","McDowell"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"La Moure","LaMoure"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mckenzie","McKenzie"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mcclain","McClain"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mccurtain","McCurtain"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mckean","McKean"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mccormick","McCormick"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mccook","McCook"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mcminn","McMinn"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mcnairy","McNairy"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mcculloch","McCulloch"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mclennan","McLennan"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Mcmullen","McMullen"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Isle Of Wight","Isle of Wight"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"King And Queen","King and Queen"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Newport News","Newport News city"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Virginia Beach","Virginia Beach city"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Fond Du Lac","Fond du Lac"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"St Croix","St. Croix"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"De Witt","DeWitt"))
+county_map %<>% mutate(subregion=str_replace_all(subregion,"Du Page","DuPage"))
+
+#Changing Virginia cities to associated counties
+
+ld.tick.county<-ld.tick
+
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Alexandria city","Fairfax"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Bedford city","Bedford"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Bristol city","Washington"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Buena Vista city","Rockbridge"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Charlottesville city","Albemarle"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Chesapeake city","Norfolk"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Colonial Heights city","Dinwiddie"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Covington city","Alleghany"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Danville city","Pittsylvania"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Emporia city","Greensville"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Fairfax city","Fairfax"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Falls Church city","Fairfax"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Franklin city","Accomack"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Fredericksburg city","Spotsylvania"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Galax city","Carroll"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Hampton city","Hampton"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Harrisonburg city","Rockingham"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Hopewell city","Prince George"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Lexington city","Rockbridge"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Lynchburg city","Campbell"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Manassas city","Prince William"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Manassas Park city","Prince William"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Martinsville city","Henry"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Norfolk city","Norfolk"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Norton city","Wise"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Petersburg city","Dinwiddie"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Poquoson city","York"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Portsmouth city","Norfolk"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Radford city","Montgomery"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Richmond city","Henrico"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Roanoke city","Roanoke"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Salem city","Roanoke"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Staunton city","Augusta"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Suffolk city","Suffolk"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Waynesboro city","Augusta"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Williamsburg city","James City"))
+ld.tick.county%<>% mutate(County=str_replace_all(County,"Winchester city","Frederick"))
+                                                
+ld.tick.county$SC<-paste(ld.tick.county$County,ld.tick.county$State,sep=",")
 county_map %<>% mutate(SC=paste(subregion,region,sep=","))
 
-ld.av <- aggregate(ld.tick$cases,by=list(ld.tick$SC),FUN=mean)
-names(ld.av)<-c("SC","av.cases")
-tmp<-inner_join(county_map,ld.av)
-
-ggplot(tmp,aes(x=long,y=lat,group=group,fill=log10(av.cases+1)))+geom_polygon()+scale_fill_continuous()+coord_map("polyconic")
-
+setdiff(county_map$subregion,ld.tick.county$County)
+setdiff(ld.tick.county$County,county_map$subregion)
 
 ```
 
+##Where do 0 tick presence Lymes Disease cases occur geographically?
+
+```{r}
+ld.av.edit<-aggregate(ld.tick.county$cases,by=list(ld.tick.county$SC,ld.tick.county$Presence_current),FUN=mean)
+names(ld.av.edit)<-c("SC","Presence_current","av.cases")
+tmp1<-inner_join(county_map,ld.av.edit)
+
+case.0<-subset(tmp1,Presence_current==0)
+
+case.2<-subset(case.0,av.cases>2)
+
+case.2<-unique(case.2)
+#[1] "Maricopa,Arizona"          "Pima,Arizona"             
+ #[3] "Alameda,California"        "Contra Costa,California"  
+ #[5] "Humboldt,California"       "Los Angeles,California"   
+ #[7] "Marin,California"          "Mendocino,California"     
+ #[9] "Nevada,California"         "Riverside,California"     
+#[11] "San Diego,California"      "San Francisco,California" 
+#[13] "San Mateo,California"      "Santa Barbara,California" 
+#[15] "Santa Clara,California"    "Santa Cruz,California"    
+#[17] "Sonoma,California"         "Marion,Indiana"           
+#[19] "Starke,Indiana"            "Johnson,Kansas"           
+#[21] "Allegan,Michigan"          "Kent,Michigan"            
+#[23] "Ottawa,Michigan"           "Washtenaw,Michigan"       
+#[25] "Clearwater,Minnesota"      "Lake,Minnesota"           
+#[27] "Polk,Minnesota"            "Douglas,Nebraska"         
+#[29] "Lancaster,Nebraska"        "Clark,Nevada"             
+#[31] "Washoe,Nevada"             "Cass,North Dakota"        
+#[33] "Grand Forks,North Dakota"  "Delaware,Ohio"            
+#[35] "Franklin,Ohio"             "Hamilton,Ohio"            
+#[37] "Montgomery,Ohio"           "Douglas,Oregon"           
+#[39] "Jackson,Oregon"            "Josephine,Oregon"         
+#[41] "Multnomah,Oregon"          "Allegheny,Pennsylvania"   
+#[43] "Armstrong,Pennsylvania"    "Beaver,Pennsylvania"      
+#[45] "Butler,Pennsylvania"       "Clarion,Pennsylvania"     
+#[47] "Fayette,Pennsylvania"      "Indiana,Pennsylvania"     
+#[49] "Lawrence,Pennsylvania"     "Mercer,Pennsylvania"      
+#[51] "Somerset,Pennsylvania"     "Washington,Pennsylvania"  
+#[53] "Westmoreland,Pennsylvania" "Brown,Texas"              
+#[55] "Frederick,Virginia"        "James City,Virginia"      
+#[57] "Pulaski,Virginia"          "Rockbridge,Virginia"      
+#[59] "Shenandoah,Virginia"       "Warren,Virginia"          
+#[61] "King,Washington"          
+ 
+ggplot(tmp1,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(tmp1$Presence_current==0,"red","black"),fill=ifelse(tmp1$av.cases>2,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)#Counties outlined in red and filled with gold have 0 tick presence but av.cases>2
+
+```
+
+##When do these cases occur?
+
+```{r}
+library(ggplot2)
+library(maptools)
+library(rgeos)
+library(ggmap)
+library(scales)
+library(RColorBrewer)
+
+tmp<-aggregate(ld.tick.county$prcp,by=list(ld.tick.county$SC,ld.tick.county$Presence_current,ld.tick.county$year,ld.tick.county$cases),FUN=mean)
+names(tmp)<-c("SC","Presence_current","year","cases","av.prcp")
+
+#Labels for counties with case>1 and tick presence=0
+cnames <- aggregate(cbind(long, lat) ~ SC, data=case.2, FUN=function(x) mean(range(x)))
+
+ggplot(map.2000,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2000$Presence_current==0,"red","black"),fill=ifelse(map.2001$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)+geom_text(data=cnames,aes(x=long,y=lat,label=SC),size=1,fontface="bold") #Error in eval(expr, envir, enclos) : object 'group' not found
+
+ggplot(map.2000,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2000$Presence_current==0,"red","black"),fill=ifelse(map.2001$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)+geom_point(aes(x=long, y =lat), data =cnames, alpha = .5) #Error in eval(expr, envir, enclos) : object 'group' not found
+
+#2000: Washington Oregon, northeast, Florida and Texas area lacking cases 
+tmp2000<-subset(tmp,year==2000)
+map.2000<-inner_join(tmp2000,county_map)
+
+ggplot(map.2000,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2000$Presence_current==0,"red","black"),fill=ifelse(map.2000$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
+
+                                        
+#2001: some case expansion near Oregon and Texas
+tmp2001<-subset(tmp,year==2001)
+map.2001<-inner_join(tmp2001,county_map)
+
+ggplot(map.2001,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2001$Presence_current==0,"red","black"),fill=ifelse(map.2001$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
+
+#2002: same as 2001 with some Northeast expansion
+tmp2002<-subset(tmp,year==2002)
+map.2002<-inner_join(tmp2002,county_map)
+
+ggplot(map.2002,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2002$Presence_current==0,"red","black"),fill=ifelse(map.2002$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
+
+#2003: Northeast expansion W-O regression
+tmp2003<-subset(tmp,year==2003)
+map.2003<-inner_join(tmp2003,county_map)
+
+ggplot(map.2003,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2003$Presence_current==0,"red","black"),fill=ifelse(map.2003$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
+
+#2004: California and north (Michigan) expansion
+tmp2004<-subset(tmp,year==2004)
+map.2004<-inner_join(tmp2004,county_map)
+
+ggplot(map.2004,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2004$Presence_current==0,"red","black"),fill=ifelse(map.2004$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
 
 
+#2005: same as 2004 except loss of one midwwest county and Texas expansion**
+tmp2005<-subset(tmp,year==2005)
+map.2005<-inner_join(tmp2005,county_map)
+
+ggplot(map.2005,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2005$Presence_current==0,"red","black"),fill=ifelse(map.2005$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
+
+#2006: Texas, northern, and California regression** 
+tmp2006<-subset(tmp,year==2006)
+map.2006<-inner_join(tmp2006,county_map)
+
+ggplot(map.2006,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2006$Presence_current==0,"red","black"),fill=ifelse(map.2006$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
+
+#2007: Still no Texas, Southwest expansion
+tmp2007<-subset(tmp,year==2007)
+map.2007<-inner_join(tmp2007,county_map)
+
+ggplot(map.2007,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2007$Presence_current==0,"red","black"),fill=ifelse(map.2007$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
+
+#2008: Texas expansion, a lot of northwest expansion**
+tmp2008<-subset(tmp,year==2008)
+map.2008<-inner_join(tmp2008,county_map)
+
+ggplot(map.2008,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2008$Presence_current==0,"red","black"),fill=ifelse(map.2008$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
+
+#2009: Southern California expasion, Texas maintanence**
+tmp2009<-subset(tmp,year==2009)
+map.2009<-inner_join(tmp2009,county_map)
+
+ggplot(map.2009,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2009$Presence_current==0,"red","black"),fill=ifelse(map.2009$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
+
+#2010: Southern Cali regression
+tmp2010<-subset(tmp,year==2010)
+map.2010<-inner_join(tmp2010,county_map)
+
+ggplot(map.2010,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2010$Presence_current==0,"red","black"),fill=ifelse(map.2010$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
+
+#2011: Texas regression, Southern Cali and W-O expansion
+tmp2011<-subset(tmp,year==2011)
+map.2011<-inner_join(tmp2011,county_map)
+
+ggplot(map.2011,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2011$Presence_current==0,"red","black"),fill=ifelse(map.2011$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
+
+#2012: Northwest and Southern Cali regression
+tmp2012<-subset(tmp,year==2012)
+map.2012<-inner_join(tmp2012,county_map)
+
+ggplot(map.2012,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2012$Presence_current==0,"red","black"),fill=ifelse(map.2012$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
+
+#2013: A lot of mid west expansion**
+tmp2013<-subset(tmp,year==2013)
+map.2013<-inner_join(tmp2013,county_map)
+
+ggplot(map.2013,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2013$Presence_current==0,"red","black"),fill=ifelse(map.2013$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
+
+#2014: midwest regression
+tmp2014<-subset(tmp,year==2014)
+map.2014<-inner_join(tmp2014,county_map)
+
+ggplot(map.2014,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2014$Presence_current==0,"red","black"),fill=ifelse(map.2014$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
+
+#2015: same as 2014
+tmp2015<-subset(tmp,year==2015)
+map.2015<-inner_join(tmp2015,county_map)
+
+ggplot(map.2015,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2015$Presence_current==0,"red","black"),fill=ifelse(map.2015$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
+
+install.packages("magick")
+m.2000<-image_read("map2000.png")
+
+```
+Important year transitions: 
+*2005(cases)-2006(loss of cases)
+*2008-2009: big case years all around
+*2013: Midwest cases
+
+#CENSUS readme.txt
+http://gking.harvard.edu/files/gking/files/readme.pdf
+
+```{r}
+install.packages("VA", repos= "http://r.iq.harvard.edu", type="source")
+install.packages("ReadMe", repos= "http://r.iq.harvard.edu", type="source")
+
+
+socio<-readme.txt("~/lyme_modeling/data/CENSUS/County Classifications.csv")
+
+```
