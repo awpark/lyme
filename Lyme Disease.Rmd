@@ -1,15 +1,30 @@
 ---
 title: "Lyme Disease"
 author: "Jenna Lea"
-date: "5/25/2017"
-output:
-  html_document: default
-  word_document: default
+date: "6/22/2017"
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+##Load Packages
+```{r}
+library(ggplot2)
+library(readr)
+library(ggmap)
+library(maps)
+library(stringr)
+library(magrittr)
+library(dplyr)
+library(maptools)
+library(rgeos)
+library(scales)
+library(RColorBrewer)
+
+```
+
 #PRISM uses image-based file storage, which means we need to work with two file types:
 
 #`bil` files (band interleaved by lines)
@@ -170,7 +185,7 @@ ld.pop<-inner_join(ld.total,pop)
 
 ##countyTick
 
-```{r}
+```{r,eval=F}
 #Compare countyTick and ld.total county names to ensure congruence for final merge: countyTick contains 3080 obs, so missing 29 counties, rename county and state to County and State
 
 names(ld.total)[names(ld.total) == 'county'] <- 'County'
@@ -191,7 +206,7 @@ countyTick$polyname<-NULL
 ```
 
 ##merging issues
-```{r}
+```{r,eval=F}
 ld.total$SC<-paste(ld.total$County,ld.total$State,sep=",")
 
 
@@ -221,14 +236,6 @@ for (i in 1:dim(countyTick)[1]){
   }
 }
 
-
-library(ggplot2)
-library(readr)
-library(ggmap)
-library(maps)
-library(stringr)
-library(magrittr)
-library(dplyr)
 
 #Fixing Inconsistencies
 countyTick %<>% mutate(County=str_replace_all(County,"Mountrial","Mountrail"))
@@ -261,6 +268,7 @@ countyTick.add<-rbind(countyTick.add,c(8014,"Broomfield","Colorado",1))
 countyTick<-countyTick.add
 
 countyTick$SC<-paste(countyTick$County,countyTick$State,sep=",")
+ld.total$SC<-paste(ld.total$County,ld.total$State,sep=",")
 
 # Adding missing cities to countyTick
 newCity<-data.frame(fips=c(24510,29510,51510,51515,51520,51530,51540,51550,51570,51580,51590,51595,51600,51610,51620,51630,51640,51660,51670,51678,51680,51683,51685,51690,51720,51730,51735,51740,51750,51760,51770,51775,51790,51820,51830,51840),County=c("Baltimore city","St. Louis city","Alexandria city","Bedford city","Bristol city","Buena Vista city","Charlottesville city","Chesapeake city","Colonial Heights city","Covington city","Danville city","Emporia city","Fairfax city","Falls Church city","Franklin city","Fredericksburg city","Galax city","Harrisonburg city","Hopewell city","Lexington city","Lynchburg city","Manassas city","Manassas Park city","Martinsville city","Norton city","Petersburg city","Poquoson city","Portsmouth city","Radford city","Richmond city","Roanoke city","Salem city","Staunton city","Waynesboro city","Williamsburg city","Winchester city"),State=c("Maryland","Missouri","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia"),Tick_presence=c(2,1,2,1,1,2,2,2,2,1,2,1,1,1,2,2,2,2,2,2,2,2,2,1,1,1,2,1,2,2,2,2,2,2,1,2))
@@ -274,9 +282,18 @@ setdiff(ld.total$County,countyTick$County)
 # No differences in dataframes
 ```
 
+##Load saved databases
+```{r}
+
+load("get_DATA.Rda")
+
+```
+
+
 ##Merge ld.total and countyTick
 
-```{r}
+```{r,eval=F}
+
 countyTick$fips<-as.numeric(countyTick$fips)
 countyTick$County<-as.character(countyTick$County)
 countyTick$State<-as.character(countyTick$State)
@@ -296,9 +313,6 @@ ld.tick$Presence_current<-ifelse(ld.tick$Presence_current%in%c(1,3),0,1)
 ```
 
 
-#Preliminary analysis
-
-
 ##Do cases occur only where ticks are present?
 
 ```{r}
@@ -307,8 +321,8 @@ ld.tick %>% filter(cases>0) %>% ggplot(aes(x=as.factor(Presence_current),y=cases
 ```
 
 ##County_map & ld.tick discrepencies
-```{r}
-library(maps)
+```{r,eval=F}
+
 county_map<-map_data("county")
 county_map %<>% mutate(region=str_to_title(region))
 county_map %<>% mutate(subregion=str_to_title(subregion))
@@ -442,6 +456,8 @@ tmp1<-inner_join(county_map,ld.av.edit)
 case.0<-subset(tmp1,Presence_current==0)
 
 case.2<-subset(case.0,av.cases>2)
+case.1<-subset(case.0,av.cases>1)
+case.1<-unique(case.1)
 
 case.2<-unique(case.2)
 #[1] "Maricopa,Arizona"          "Pima,Arizona"             
@@ -483,22 +499,9 @@ ggplot(tmp1,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(tmp1$Presence
 ##When do these cases occur?
 
 ```{r}
-library(ggplot2)
-library(maptools)
-library(rgeos)
-library(ggmap)
-library(scales)
-library(RColorBrewer)
 
 tmp<-aggregate(ld.tick.county$prcp,by=list(ld.tick.county$SC,ld.tick.county$Presence_current,ld.tick.county$year,ld.tick.county$cases),FUN=mean)
 names(tmp)<-c("SC","Presence_current","year","cases","av.prcp")
-
-#Labels for counties with case>1 and tick presence=0
-cnames <- aggregate(cbind(long, lat) ~ SC, data=case.2, FUN=function(x) mean(range(x)))
-
-ggplot(map.2000,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2000$Presence_current==0,"red","black"),fill=ifelse(map.2001$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)+geom_text(data=cnames,aes(x=long,y=lat,label=SC),size=1,fontface="bold") #Error in eval(expr, envir, enclos) : object 'group' not found
-
-ggplot(map.2000,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2000$Presence_current==0,"red","black"),fill=ifelse(map.2001$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)+geom_point(aes(x=long, y =lat), data =cnames, alpha = .5) #Error in eval(expr, envir, enclos) : object 'group' not found
 
 #2000: Washington Oregon, northeast, Florida and Texas area lacking cases 
 tmp2000<-subset(tmp,year==2000)
@@ -506,7 +509,6 @@ map.2000<-inner_join(tmp2000,county_map)
 
 ggplot(map.2000,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2000$Presence_current==0,"red","black"),fill=ifelse(map.2000$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
 
-                                        
 #2001: some case expansion near Oregon and Texas
 tmp2001<-subset(tmp,year==2001)
 map.2001<-inner_join(tmp2001,county_map)
@@ -598,23 +600,259 @@ map.2015<-inner_join(tmp2015,county_map)
 
 ggplot(map.2015,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2015$Presence_current==0,"red","black"),fill=ifelse(map.2015$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
 
-install.packages("magick")
-m.2000<-image_read("map2000.png")
 
 ```
+
+
+#Labels for counties with case>1 and case>2 and tick presence=0
+```{r}
+cnames.1 <- aggregate(cbind(long, lat) ~ SC, data=case.1, FUN=function(x) mean(range(x)))
+
+cnames.2 <- aggregate(cbind(long, lat) ~ SC, data=case.2, FUN=function(x) mean(range(x)))
+
+ggplot(map.2000,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2000$SC %in% cnames.1$SC,"red","black"),fill=ifelse(map.2000$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)#If outlined in red than av.case>1 and tick presence=0
+
+```
+
+##Avg Prcp for important years
 Important year transitions: 
 *2005(cases)-2006(loss of cases)
 *2008-2009: big case years all around
 *2013: Midwest cases
 
-#CENSUS readme.txt
-http://gking.harvard.edu/files/gking/files/readme.pdf
+```{r}
+#2005-2006 case comparison: 1014.887 and 1035.723 are mean of av.prcp for given year; prcp goes below avg in S.Cali & Midwest but above average in Michigan; precipitation influence only in northeast?
+
+ggplot(map.2005,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2005$SC %in% cnames.1$SC,"red","gray40"),fill=ifelse(map.2005$av.prcp>1014.887,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
+
+
+ggplot(map.2006,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2006$SC %in% cnames.1$SC,"red","gray40"),fill=ifelse(map.2006$av.prcp>1035.723,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
+
+#2008-2009: Rainy northeast midwest, dry California
+
+ggplot(map.2008,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2008$SC %in% cnames.1$SC,"red","gray40"),fill=ifelse(map.2008$av.prcp>1075.407,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
+
+ggplot(map.2009,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2009$SC %in% cnames.1$SC,"red","gray40"),fill=ifelse(map.2009$av.prcp>1178.298,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
+
+#2013: Dry year northwest, rainy for some of midwest (less than 2008-2009)
+
+ggplot(map.2013,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2013$SC %in% cnames.1$SC,"red","gray40"),fill=ifelse(map.2013$av.prcp>1132.778,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
+```
+
+
+##Socioeconomic and deer Data
 
 ```{r}
-install.packages("VA", repos= "http://r.iq.harvard.edu", type="source")
-install.packages("ReadMe", repos= "http://r.iq.harvard.edu", type="source")
+#County Classifications
+class<-read.csv("~/lyme_modeling/data/CENSUS/County Classifications.csv")
+#Income
+income<-read.csv("~/lyme_modeling/data/CENSUS/Income.csv")
+#Jobs
+jobs<-read.csv("~/lyme_modeling/data/CENSUS/Jobs.csv")
+#Deer
+deer<-read.csv("~/lyme_modeling/data/DEER/deer_density.csv")
+
+```
+
+#Jobs Tidyverse conversion: Unemployment Rate 2007-2015
+
+```{r}
+jobs %<>% gather(starts_with("UnempRate"),key="str_year",value="UnemploymentRate") 
+jobs %<>% mutate(year=gsub("UnempRate","",str_year)) 
+jobs %<>% mutate(year=as.numeric(year))
+jobs %<>% select(c(FIPS,State,County,UnemploymentRate,year))
+
+jobs%<>% mutate(State=str_replace_all(State,"AL","Alabama"))
+jobs%<>% mutate(State=str_replace_all(State,"AR","Arkansas"))
+jobs%<>% mutate(State=str_replace_all(State,"AZ","Arizona"))
+jobs%<>% mutate(State=str_replace_all(State,"CA","California"))
+jobs%<>% mutate(State=str_replace_all(State,"CO","Colorado"))
+jobs%<>% mutate(State=str_replace_all(State,"CT","Connecticut"))
+jobs%<>% mutate(State=str_replace_all(State,"DE","Delaware"))
+jobs%<>% mutate(State=str_replace_all(State,"FL","Florida"))
+jobs%<>% mutate(State=str_replace_all(State,"GA","Georgia"))
+jobs%<>% mutate(State=str_replace_all(State,"ID","Idaho"))
+jobs%<>% mutate(State=str_replace_all(State,"IL","Illinois"))
+jobs%<>% mutate(State=str_replace_all(State,"IN","Indiana"))
+jobs%<>% mutate(State=str_replace_all(State,"IA","Iowa"))
+jobs%<>% mutate(State=str_replace_all(State,"KS","Kansas"))
+jobs%<>% mutate(State=str_replace_all(State,"KY","Kentucky"))
+jobs%<>% mutate(State=str_replace_all(State,"LA","Louisiana"))
+jobs%<>% mutate(State=str_replace_all(State,"ME","Maine"))
+jobs%<>% mutate(State=str_replace_all(State,"MD","Maryland"))
+jobs%<>% mutate(State=str_replace_all(State,"MA","Massachusetts"))
+jobs%<>% mutate(State=str_replace_all(State,"MI","Michigan"))
+jobs%<>% mutate(State=str_replace_all(State,"MN","Minnesota"))
+jobs%<>% mutate(State=str_replace_all(State,"MS","Mississippi"))
+jobs%<>% mutate(State=str_replace_all(State,"MO","Missouri"))
+jobs%<>% mutate(State=str_replace_all(State,"MT","Montana"))
+jobs%<>% mutate(State=str_replace_all(State,"NE","Nebraska"))
+jobs%<>% mutate(State=str_replace_all(State,"NV","Nevada"))
+jobs%<>% mutate(State=str_replace_all(State,"NH","New Hampshire"))
+jobs%<>% mutate(State=str_replace_all(State,"NJ","New Jersey"))
+jobs%<>% mutate(State=str_replace_all(State,"NM","New Mexico"))
+jobs%<>% mutate(State=str_replace_all(State,"NY","New York"))
+jobs%<>% mutate(State=str_replace_all(State,"NC","North Carolina"))
+jobs%<>% mutate(State=str_replace_all(State,"ND","North Dakota"))
+jobs%<>% mutate(State=str_replace_all(State,"OH","Ohio"))
+jobs%<>% mutate(State=str_replace_all(State,"OK","Oklahoma"))
+jobs%<>% mutate(State=str_replace_all(State,"OR","Oregon"))
+jobs%<>% mutate(State=str_replace_all(State,"PA","Pennsylvania"))
+jobs%<>% mutate(State=str_replace_all(State,"RI","Rhode Island"))
+jobs%<>% mutate(State=str_replace_all(State,"SC","South Carolina"))
+jobs%<>% mutate(State=str_replace_all(State,"SD","South Dakota"))
+jobs%<>% mutate(State=str_replace_all(State,"TN","Tennessee"))
+jobs%<>% mutate(State=str_replace_all(State,"TX","Texas"))
+jobs%<>% mutate(State=str_replace_all(State,"UT","Utah"))
+jobs%<>% mutate(State=str_replace_all(State,"VT","Vermont"))
+jobs%<>% mutate(State=str_replace_all(State,"VA","Virginia"))
+jobs%<>% mutate(State=str_replace_all(State,"WA","Washington"))
+jobs%<>% mutate(State=str_replace_all(State,"WV","West Virginia"))
+jobs%<>% mutate(State=str_replace_all(State,"WI","Wisconsin"))
+jobs%<>% mutate(State=str_replace_all(State,"WY","Wyoming"))
+
+jobs$SC<-paste(jobs$County,jobs$State,sep=",")
+jobs$FIPS<-as.numeric(jobs$FIPS)
+names(jobs)[names(jobs) == 'FIPS'] <- 'fips'
+
+jobs_map<-inner_join(ld.tick.county,jobs)
+
+```
+##Deer conversion
+```{r}
+#Deer
+deer<-read.csv("~/lyme_modeling/data/DEER/deer_density.csv")
+deer$CntyName<-gsub(" County","",deer$CntyName)
+names(deer)[names(deer)=='StateName']<-'State'
+names(deer)[names(deer)=='CntyName']<-'County'
+names(deer)[names(deer) == 'FIPS'] <- 'fips'
+deer$SC<-paste(deer$County,deer$State,sep=",")
+
+setdiff(deer$SC,pres.1$SC)
+
+```
+
+##Univeriate Predictor Plots
+```{r}
+#Counties only where ticks are present
+pres.1<-subset(ld.tick.county,Presence_current==1)
+pres.jobs<-inner_join(pres.1,jobs_map)
+
+ggplot(pres.1,aes(x=(cases),y=log10(prcp)))+geom_point(data=subset(pres.1,year==2000,stat=identity))
+
+ggplot(pres.1,aes(x=(cases),y=log10(prcp)))+geom_point(data=subset(pres.1,year==2001,stat=identity))
+
+ggplot(pres.1,aes(x=(cases),y=log10(prcp)))+geom_point(data=subset(pres.1,year==2002,stat=identity))
+
+```
+
+##State unemployment
+
+```{r}
+#Building dataframe of average unemployment rate and average cases per state 2007-2015
+
+#2007
+job2007<-subset(pres.jobs,year==2007)
+tmpj2007<-aggregate(job2007$cases,by=list(job2007$State,job2007$year),FUN=mean)
+names(tmpj2007)<-c("State","year","av.cases")
+tmpj22007<-aggregate(job2007$UnemploymentRate,by=list(job2007$State,job2007$year),FUN=mean)
+names(tmpj22007)<-c("State1","year1","av.UR")
+j.2007<-cbind(tmpj2007,tmpj22007)
+j.2007$State1<-NULL
+j.2007$year1<-NULL
+
+#2008
+job2008<-subset(pres.jobs,year==2008)
+tmpj2008<-aggregate(job2008$cases,by=list(job2008$State,job2008$year),FUN=mean)
+names(tmpj2008)<-c("State","year","av.cases")
+tmpj22008<-aggregate(job2008$UnemploymentRate,by=list(job2008$State,job2008$year),FUN=mean)
+names(tmpj22008)<-c("State1","year1","av.UR")
+j.2008<-cbind(tmpj2008,tmpj22008)
+j.2008$State1<-NULL
+j.2008$year1<-NULL
+
+#2009
+job2009<-subset(pres.jobs,year==2009)
+tmpj2009<-aggregate(job2009$cases,by=list(job2009$State,job2009$year),FUN=mean)
+names(tmpj2009)<-c("State","year","av.cases")
+tmpj22009<-aggregate(job2009$UnemploymentRate,by=list(job2009$State,job2009$year),FUN=mean)
+names(tmpj22009)<-c("State1","year1","av.UR")
+j.2009<-cbind(tmpj2009,tmpj22009)
+j.2009$State1<-NULL
+j.2009$year1<-NULL
+
+#2010
+job2010<-subset(pres.jobs,year==2010)
+tmpj2010<-aggregate(job2010$cases,by=list(job2010$State,job2010$year),FUN=mean)
+names(tmpj2010)<-c("State","year","av.cases")
+tmpj22010<-aggregate(job2010$UnemploymentRate,by=list(job2010$State,job2010$year),FUN=mean)
+names(tmpj22010)<-c("State1","year1","av.UR")
+j.2010<-cbind(tmpj2010,tmpj22010)
+j.2010$State1<-NULL
+j.2010$year1<-NULL
+
+#2011
+job2011<-subset(pres.jobs,year==2011)
+tmpj2011<-aggregate(job2011$cases,by=list(job2011$State,job2011$year),FUN=mean)
+names(tmpj2011)<-c("State","year","av.cases")
+tmpj22011<-aggregate(job2011$UnemploymentRate,by=list(job2011$State,job2011$year),FUN=mean)
+names(tmpj22011)<-c("State1","year1","av.UR")
+j.2011<-cbind(tmpj2011,tmpj22011)
+j.2011$State1<-NULL
+j.2011$year1<-NULL
+
+#2012
+job2012<-subset(pres.jobs,year==2012)
+tmpj2012<-aggregate(job2012$cases,by=list(job2012$State,job2012$year),FUN=mean)
+names(tmpj2012)<-c("State","year","av.cases")
+tmpj22012<-aggregate(job2012$UnemploymentRate,by=list(job2012$State,job2012$year),FUN=mean)
+names(tmpj22012)<-c("State1","year1","av.UR")
+j.2012<-cbind(tmpj2012,tmpj22012)
+j.2012$State1<-NULL
+j.2012$year1<-NULL
+
+#2013
+job2013<-subset(pres.jobs,year==2013)
+tmpj2013<-aggregate(job2013$cases,by=list(job2013$State,job2013$year),FUN=mean)
+names(tmpj2013)<-c("State","year","av.cases")
+tmpj22013<-aggregate(job2013$UnemploymentRate,by=list(job2013$State,job2013$year),FUN=mean)
+names(tmpj22013)<-c("State1","year1","av.UR")
+j.2013<-cbind(tmpj2013,tmpj22013)
+j.2013$State1<-NULL
+j.2013$year1<-NULL
+
+#2014
+job2014<-subset(pres.jobs,year==2014)
+tmpj2014<-aggregate(job2014$cases,by=list(job2014$State,job2014$year),FUN=mean)
+names(tmpj2014)<-c("State","year","av.cases")
+tmpj22014<-aggregate(job2014$UnemploymentRate,by=list(job2014$State,job2014$year),FUN=mean)
+names(tmpj22014)<-c("State1","year1","av.UR")
+j.2014<-cbind(tmpj2014,tmpj22014)
+j.2014$State1<-NULL
+j.2014$year1<-NULL
+
+#2015
+job2015<-subset(pres.jobs,year==2015)
+tmpj2015<-aggregate(job2015$cases,by=list(job2015$State,job2015$year),FUN=mean)
+names(tmpj2015)<-c("State","year","av.cases")
+tmpj22015<-aggregate(job2015$UnemploymentRate,by=list(job2015$State,job2015$year),FUN=mean)
+names(tmpj22015)<-c("State1","year1","av.UR")
+j.2015<-cbind(tmpj2015,tmpj22015)
+j.2015$State1<-NULL
+j.2015$year1<-NULL
+
+av.jobs<-rbind(j.2007,j.2008,j.2009,j.2010,j.2011,j.2012,j.2013,j.2014,j.2015)
+
+##Saved as get_JOBS.Rda
+
+ggplot(av.jobs,aes(x=av.cases,y=av))
+
+```
 
 
-socio<-readme.txt("~/lyme_modeling/data/CENSUS/County Classifications.csv")
+```{r}
+library(reshape2)
+melted<-melt(av.jobs,id.vars="State",value.name = "av.UR",variable.name = "year")
 
+ggplot(melted,aes(x=year,y=av.UR,group=State,colour=State))+geom_line()
 ```
