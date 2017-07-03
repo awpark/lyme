@@ -128,7 +128,7 @@ library(tidyr)
 library(magrittr)
 library(dplyr)
 
-pop %<>% select(fips,starts_with("pop2"))
+pop %<>% select(fips,state_name,starts_with("pop2"))
 pop %<>% gather(starts_with("pop2"),key="str_year",value="size") %>% na.omit
 pop %<>% mutate(year=gsub("pop","",str_year))
 pop %<>% mutate(year=as.numeric(year))
@@ -872,6 +872,29 @@ av.jobs<-rbind(j.2007,j.2008,j.2009,j.2010,j.2011,j.2012,j.2013,j.2014,j.2015)
 ##Saved as get_JOBS.Rda
 
 ```
+
+###Alternate aggregation
+
+* consider tweaking incidence to be cases per 100,000 ppl
+
+```{r}
+
+x <- ld.tick.county %>% filter(Presence_current==1) %>% group_by(State,year) %>% summarize(tot.cases=sum(cases))
+y <- inner_join(x,av.jobs,by=c("State","year"))
+y250up <- y %>% filter(tot.cases>=250)
+ggplot(y,aes(x=av.UR,y=tot.cases,col=as.factor(year)))+geom_point()
+
+z <- pop %>% group_by(state_name,year) %>% summarize(tot.pop=sum(pop))
+z %<>% rename(State=state_name)
+
+z <- inner_join(z,y)
+z %<>% mutate(incidence=tot.cases/tot.pop)
+
+z_big <- z %>% filter(incidence>=0.0003)
+
+ggplot(z_big,aes(x=av.UR,y=incidence))+geom_point(aes(col=as.factor(year)))+geom_smooth(method="lm")
+```
+
 
 
 ##Unemployment plots and average case plots for same years; is there any sort of trend to help predict 2000-2006 Unemployment Rate?
