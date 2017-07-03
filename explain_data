@@ -1,0 +1,33 @@
+Dataframe explanations:
+  
+>ld.total: all CDC case and PRISM climate data per county 
+
+>ld.pop: same as ld.total but with population added; seperate dataframe necessary because population data only goes until 2014
+
+>countyTick: Tick presence data per county
+
+>ld.tick: all climate, cdc, and tick current, past, and future presence per county
+
+>ld.tick.county: same as ld.tick but with County corrections to merge with county_map database
+
+>ld.av.edit: average case count for counties
+
+>case.0: average case count for counties with 0 tick presence
+
+>case.1: case.0 counties with >1 av.case
+
+>case.2: case.0 counties with >2 av.case
+
+>jobs_map: all previous county data plus unemployment rate for counties where ticks are present (Presence_current=1)
+
+>ld.pres.total: all previous county data plus deer data for counties where ticks are present 
+
+>ld.pop.edit: all previous county data plus population for counties where ticks are present
+
+>u: State level summaries of average cases, average unemployment rate, and total cases 2007-2015
+
+>u250up: subset of u of states with more than 250 cases
+
+>z: same as u plus total population and incidence measure (100,000*(total cases/total population))
+
+>z big: subset of z of states with incidence > 0.03

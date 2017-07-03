@@ -114,6 +114,9 @@ load("get_PRISM.Rda")
 mintemp<-read.csv("MinTemp")
 maxtemp<-read.csv("MaxTemp")
 
+#Load saved dataframes
+load("get_DATA.Rda")
+
 #Remove X column
 mintemp$X<-NULL
 maxtemp$X<-NULL
@@ -169,12 +172,12 @@ ld %<>% select(-c(STCODE,CTYCODE,str_year))
 
 ```{r}
 #Join prism prcp and avtmp with ld 
-ld.prism<-inner_join(ld,prism)
+ld.total<-inner_join(ld,prism)
 #Join with mintemp and rename av column to mintmp
-ld.prism.min<-inner_join(ld.prism,mintemp)
-names(ld.prism.min)[names(ld.prism.min) == 'av'] <- 'mintmp'
+ld.total<-inner_join(ld.total,mintemp)
+names(ld.total)[names(ld.total) == 'av'] <- 'mintmp'
 #Join with maxtemp and rename av column to maxtmp
-ld.total<-inner_join(ld.prism.min,maxtemp)
+ld.total<-inner_join(ld.total,maxtemp)
 names(ld.total)[names(ld.total) == 'av'] <- 'maxtmp'
 #Join with pop
 ld.pop<-inner_join(ld.total,pop)
@@ -281,14 +284,6 @@ setdiff(ld.total$County,countyTick$County)
 
 # No differences in dataframes
 ```
-
-##Load saved databases
-```{r}
-
-load("get_DATA.Rda")
-
-```
-
 
 ##Merge ld.total and countyTick
 
@@ -600,7 +595,6 @@ map.2015<-inner_join(tmp2015,county_map)
 
 ggplot(map.2015,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2015$Presence_current==0,"red","black"),fill=ifelse(map.2015$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
 
-
 ```
 
 
@@ -715,11 +709,8 @@ jobs$SC<-paste(jobs$County,jobs$State,sep=",")
 jobs$FIPS<-as.numeric(jobs$FIPS)
 names(jobs)[names(jobs) == 'FIPS'] <- 'fips'
 
-jobs_map<-inner_join(ld.tick.county,jobs)
-
-#Counties only where ticks are present
-pres.1<-subset(ld.tick.county,Presence_current==1)
-pres.jobs<-inner_join(pres.1,jobs_map)
+jobs_map<-inner_join(ld.tick.county,jobs) 
+jobs_map<-jobs_map %>% filter (Presence_current==1) 
 
 ```
 ##Deer conversion
@@ -732,169 +723,33 @@ names(deer)[names(deer)=='CntyName']<-'County'
 names(deer)[names(deer) == 'FIPS'] <- 'fips'
 deer$SC<-paste(deer$County,deer$State,sep=",")
 
-ld.pres.total<-inner_join(deer,pres.1)
-```
-
-##Univeriate Predictor Plots
-```{r}
-#Precipitation
-ggplot(ld.pres.total,aes(x=(cases),y=log10(prcp)))+geom_point(data=subset(ld.pres.total,year==2000,stat=identity))
-
-ggplot(ld.pres.total,aes(x=(cases),y=log10(prcp)))+geom_point(data=subset(ld.pres.total,year==2001,stat=identity))
-
-ggplot(ld.pres.total,aes(x=(cases),y=log10(prcp)))+geom_point(data=subset(ld.pres.total,year==2002,stat=identity))
-
-ggplot(ld.pres.total,aes(x=(cases),y=log10(prcp)))+geom_point(data=subset(ld.pres.total,year==2008,stat=identity))
-
-ggplot(ld.pres.total,aes(x=log10(cases),y=log10(prcp)))+geom_point(data=subset(ld.pres.total,year==2009,stat=identity))+geom_smooth()
-#Deer
-ggplot(ld.pres.total,aes(x=(DeerDensityMax),y=log10(cases),group=DeerDensityMax))+geom_boxplot()
-ggplot(ld.pres.total,aes(x=(DeerDensityMode),y=log10(cases),group=DeerDensityMode))+geom_boxplot()
-
-#Population: As population increase so do cases
-ld.pop.edit<-inner_join(ld.pop,ld.pres.total)
-
-ggplot(ld.pop.edit,aes(x=log10(cases),y=log10(pop)))+geom_point(data=subset(ld.pop.edit,year==2005,stat=identity))+geom_smooth()
-
-ggplot(ld.pop.edit,aes(x=log10(cases),y=log10(pop)))+geom_point(data=subset(ld.pop.edit,year==2009,stat=identity))+geom_smooth()
-
-ggplot(ld.pop.edit,aes(x=log10(cases),y=log10(pop)))+geom_point(data=subset(ld.pop.edit,year==2008,stat=identity))+geom_smooth()
-
-#Temperature
-
-ggplot(ld.pres.total,aes(x=log10(cases),y=log10(avtemp)))+geom_point(data=subset(ld.pres.total,year==2009,stat=identity))+geom_smooth()
-
-ggplot(ld.pres.total,aes(x=log10(cases),y=log10(avtemp)))+geom_point(data=subset(ld.pres.total,year==2008,stat=identity))+geom_smooth()
-
-ggplot(ld.pres.total,aes(x=log10(cases),y=log10(avtemp)))+geom_point(data=subset(ld.pres.total,year==2005,stat=identity))+geom_smooth()
-
-ggplot(ld.pres.total,aes(x=log10(cases),y=log10(avtemp)))+geom_point(data=subset(ld.pres.total,year==2006,stat=identity))+geom_smooth()
-
+ld.pres.total<-inner_join(deer,ld.tick.county)
+ld.jobs.total<-inner_join(deer,jobs_map)
 ```
 
 ##State unemployment
 
 ```{r}
-#Building dataframe of average unemployment rate and average cases per state 2007-2015; This is rather clunky, I need to come back and try writing a loop to do this
+#Building dataframe of average unemployment rate, average cases, total cases, and total population per state 2007-2015
 
-#2007
-job2007<-subset(pres.jobs,year==2007)
-tmpj2007<-aggregate(job2007$cases,by=list(job2007$State,job2007$year),FUN=mean)
-names(tmpj2007)<-c("State","year","av.cases")
-tmpj22007<-aggregate(job2007$UnemploymentRate,by=list(job2007$State,job2007$year),FUN=mean)
-names(tmpj22007)<-c("State1","year1","av.UR")
-j.2007<-cbind(tmpj2007,tmpj22007)
-j.2007$State1<-NULL
-j.2007$year1<-NULL
+u<- jobs_map %>% filter(Presence_current==1) %>% group_by(State,year) %>% summarize(av.UR=mean(UnemploymentRate),av.cases=mean(cases),tot.cases=sum(cases))
 
-#2008
-job2008<-subset(pres.jobs,year==2008)
-tmpj2008<-aggregate(job2008$cases,by=list(job2008$State,job2008$year),FUN=mean)
-names(tmpj2008)<-c("State","year","av.cases")
-tmpj22008<-aggregate(job2008$UnemploymentRate,by=list(job2008$State,job2008$year),FUN=mean)
-names(tmpj22008)<-c("State1","year1","av.UR")
-j.2008<-cbind(tmpj2008,tmpj22008)
-j.2008$State1<-NULL
-j.2008$year1<-NULL
+#More than 250 cases
+u250up <- u %>% filter(tot.cases>=250)
 
-#2009
-job2009<-subset(pres.jobs,year==2009)
-tmpj2009<-aggregate(job2009$cases,by=list(job2009$State,job2009$year),FUN=mean)
-names(tmpj2009)<-c("State","year","av.cases")
-tmpj22009<-aggregate(job2009$UnemploymentRate,by=list(job2009$State,job2009$year),FUN=mean)
-names(tmpj22009)<-c("State1","year1","av.UR")
-j.2009<-cbind(tmpj2009,tmpj22009)
-j.2009$State1<-NULL
-j.2009$year1<-NULL
+ggplot(u,aes(x=av.UR,y=tot.cases,col=as.factor(year)))+geom_point()
 
-#2010
-job2010<-subset(pres.jobs,year==2010)
-tmpj2010<-aggregate(job2010$cases,by=list(job2010$State,job2010$year),FUN=mean)
-names(tmpj2010)<-c("State","year","av.cases")
-tmpj22010<-aggregate(job2010$UnemploymentRate,by=list(job2010$State,job2010$year),FUN=mean)
-names(tmpj22010)<-c("State1","year1","av.UR")
-j.2010<-cbind(tmpj2010,tmpj22010)
-j.2010$State1<-NULL
-j.2010$year1<-NULL
-
-#2011
-job2011<-subset(pres.jobs,year==2011)
-tmpj2011<-aggregate(job2011$cases,by=list(job2011$State,job2011$year),FUN=mean)
-names(tmpj2011)<-c("State","year","av.cases")
-tmpj22011<-aggregate(job2011$UnemploymentRate,by=list(job2011$State,job2011$year),FUN=mean)
-names(tmpj22011)<-c("State1","year1","av.UR")
-j.2011<-cbind(tmpj2011,tmpj22011)
-j.2011$State1<-NULL
-j.2011$year1<-NULL
-
-#2012
-job2012<-subset(pres.jobs,year==2012)
-tmpj2012<-aggregate(job2012$cases,by=list(job2012$State,job2012$year),FUN=mean)
-names(tmpj2012)<-c("State","year","av.cases")
-tmpj22012<-aggregate(job2012$UnemploymentRate,by=list(job2012$State,job2012$year),FUN=mean)
-names(tmpj22012)<-c("State1","year1","av.UR")
-j.2012<-cbind(tmpj2012,tmpj22012)
-j.2012$State1<-NULL
-j.2012$year1<-NULL
-
-#2013
-job2013<-subset(pres.jobs,year==2013)
-tmpj2013<-aggregate(job2013$cases,by=list(job2013$State,job2013$year),FUN=mean)
-names(tmpj2013)<-c("State","year","av.cases")
-tmpj22013<-aggregate(job2013$UnemploymentRate,by=list(job2013$State,job2013$year),FUN=mean)
-names(tmpj22013)<-c("State1","year1","av.UR")
-j.2013<-cbind(tmpj2013,tmpj22013)
-j.2013$State1<-NULL
-j.2013$year1<-NULL
-
-#2014
-job2014<-subset(pres.jobs,year==2014)
-tmpj2014<-aggregate(job2014$cases,by=list(job2014$State,job2014$year),FUN=mean)
-names(tmpj2014)<-c("State","year","av.cases")
-tmpj22014<-aggregate(job2014$UnemploymentRate,by=list(job2014$State,job2014$year),FUN=mean)
-names(tmpj22014)<-c("State1","year1","av.UR")
-j.2014<-cbind(tmpj2014,tmpj22014)
-j.2014$State1<-NULL
-j.2014$year1<-NULL
-
-#2015
-job2015<-subset(pres.jobs,year==2015)
-tmpj2015<-aggregate(job2015$cases,by=list(job2015$State,job2015$year),FUN=mean)
-names(tmpj2015)<-c("State","year","av.cases")
-tmpj22015<-aggregate(job2015$UnemploymentRate,by=list(job2015$State,job2015$year),FUN=mean)
-names(tmpj22015)<-c("State1","year1","av.UR")
-j.2015<-cbind(tmpj2015,tmpj22015)
-j.2015$State1<-NULL
-j.2015$year1<-NULL
-
-av.jobs<-rbind(j.2007,j.2008,j.2009,j.2010,j.2011,j.2012,j.2013,j.2014,j.2015)
-
-##Saved as get_JOBS.Rda
-
-```
-
-###Alternate aggregation
-
-* consider tweaking incidence to be cases per 100,000 ppl
-
-```{r}
-
-x <- ld.tick.county %>% filter(Presence_current==1) %>% group_by(State,year) %>% summarize(tot.cases=sum(cases))
-y <- inner_join(x,av.jobs,by=c("State","year"))
-y250up <- y %>% filter(tot.cases>=250)
-ggplot(y,aes(x=av.UR,y=tot.cases,col=as.factor(year)))+geom_point()
+#Adding in population
 
 z <- pop %>% group_by(state_name,year) %>% summarize(tot.pop=sum(pop))
 z %<>% rename(State=state_name)
 
-z <- inner_join(z,y)
-z %<>% mutate(incidence=tot.cases/tot.pop)
+z <- inner_join(z,u)
+z %<>% mutate(incidence=(100000*(tot.cases/tot.pop)))
 
-z_big <- z %>% filter(incidence>=0.0003)
+z_big <- z %>% filter(incidence>=0.3)
 
-ggplot(z_big,aes(x=av.UR,y=incidence))+geom_point(aes(col=as.factor(year)))+geom_smooth(method="lm")
 ```
-
 
 
 ##Unemployment plots and average case plots for same years; is there any sort of trend to help predict 2000-2006 Unemployment Rate?
@@ -902,62 +757,119 @@ ggplot(z_big,aes(x=av.UR,y=incidence))+geom_point(aes(col=as.factor(year)))+geom
 library(reshape2)
 
 #All of average cases per sets of 5 States
-pres.1.edit<-aggregate(pres.1$cases,by=list(pres.1$State,pres.1$year),FUN=mean)
-names(pres.1.edit)<-c("State","year","av.cases")
+
 #"Alabama","Arkansas","Connecticut","Delaware","Florida"
-ggplot(subset(pres.1.edit,State %in% c("Alabama","Arkansas","Connecticut","Delaware","Florida")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
+ggplot(subset(u,State %in% c("Alabama","Arkansas","Connecticut","Delaware","Florida")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
 #"Gerogia","Illinois","Iowa","Louisiana","Maine"
-ggplot(subset(pres.1.edit,State %in% c("Gerogia","Illinois","Iowa","Louisiana","Maine")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
+ggplot(subset(u,State %in% c("Gerogia","Illinois","Iowa","Louisiana","Maine")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
 #"Maryland","Massachusetts","Michigan","Minnesota","Mississippi"
-ggplot(subset(pres.1.edit,State %in% c("Maryland","Massachusetts","Michigan","Minnesota","Mississippi")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
+ggplot(subset(u,State %in% c("Maryland","Massachusetts","Michigan","Minnesota","Mississippi")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
 #"Missouri","Nebraska","New Hampshire","New Jesey","New York"
-ggplot(subset(pres.1.edit,State %in% c("Missouri","Nebraska","New Hampshire","New Jesey","New York")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
+ggplot(subset(u,State %in% c("Missouri","Nebraska","New Hampshire","New Jesey","New York")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
 #"North Carolina","North Dakota","Ohio","Oklahoma","Pennsylvania"
-ggplot(subset(pres.1.edit,State %in% c("North Carolina","North Dakota","Ohio","Oklahoma","Pennsylvania")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
+ggplot(subset(u,State %in% c("North Carolina","North Dakota","Ohio","Oklahoma","Pennsylvania")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
 #"Rhode Island","South Carolina","South Dakota","Tennessee","Texas"
-ggplot(subset(pres.1.edit,State %in% c("Rhode Island","South Carolina","South Dakota","Tennessee","Texas")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
+ggplot(subset(u,State %in% c("Rhode Island","South Carolina","South Dakota","Tennessee","Texas")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
 #"Vermont","Virginia","West Virginia","Wisconsin"
-ggplot(subset(pres.1.edit,State %in% c("Vermont","Virginia","West Virginia","Wisconsin")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
+ggplot(subset(u,State %in% c("Vermont","Virginia","West Virginia","Wisconsin")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
 
 
 #All 50 states Unemployment Rate
-ggplot(av.jobs,aes(x=year,y=av.UR,group=State,colour=State))+geom_line()
+ggplot(u,aes(x=year,y=av.UR,group=State,colour=State))+geom_line()
 
 #Subsets of 5
 
 #"Alabama","Arkansas","Connecticut","Delaware","Florida"
-ggplot(subset(av.jobs,State %in% c("Alabama","Arkansas","Connecticut","Delaware","Florida")))+geom_line(aes(year,av.UR,group=State,colour=State))
+ggplot(subset(u,State %in% c("Alabama","Arkansas","Connecticut","Delaware","Florida")))+geom_line(aes(year,av.UR,group=State,colour=State))
 
-ggplot(subset(av.jobs, State %in% c("Alabama","Arkansas","Connecticut","Delaware","Florida")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
+ggplot(subset(u, State %in% c("Alabama","Arkansas","Connecticut","Delaware","Florida")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
 
 #"Gerogia","Illinois","Iowa","Louisiana","Maine"
-ggplot(subset(av.jobs,State %in% c("Gerogia","Illinois","Iowa","Louisiana","Maine")))+geom_line(aes(year,av.UR,group=State,colour=State))
+ggplot(subset(u,State %in% c("Gerogia","Illinois","Iowa","Louisiana","Maine")))+geom_line(aes(year,av.UR,group=State,colour=State))
 
-ggplot(subset(av.jobs,State %in% c("Gerogia","Illinois","Iowa","Louisiana","Maine")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
+ggplot(subset(u,State %in% c("Gerogia","Illinois","Iowa","Louisiana","Maine")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
 
 #"Maryland","Massachusetts","Michigan","Minnesota","Mississippi"
-ggplot(subset(av.jobs,State %in% c("Maryland","Massachusetts","Michigan","Minnesota","Mississippi")))+geom_line(aes(year,av.UR,group=State,colour=State))
+ggplot(subset(u,State %in% c("Maryland","Massachusetts","Michigan","Minnesota","Mississippi")))+geom_line(aes(year,av.UR,group=State,colour=State))
 
-ggplot(subset(av.jobs,State %in% c("Maryland","Massachusetts","Michigan","Minnesota","Mississippi")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
+ggplot(subset(u,State %in% c("Maryland","Massachusetts","Michigan","Minnesota","Mississippi")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
 
 #"Missouri","Nebraska","New Hampshire","New Jesey","New York"
-ggplot(subset(av.jobs,State %in% c("Missouri","Nebraska","New Hampshire","New Jesey","New York")))+geom_line(aes(year,av.UR,group=State,colour=State))
+ggplot(subset(u,State %in% c("Missouri","Nebraska","New Hampshire","New Jesey","New York")))+geom_line(aes(year,av.UR,group=State,colour=State))
 
-ggplot(subset(av.jobs,State %in% c("Missouri","Nebraska","New Hampshire","New Jesey","New York")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
+ggplot(subset(u,State %in% c("Missouri","Nebraska","New Hampshire","New Jesey","New York")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
 
 #"North Carolina","North Dakota","Ohio","Oklahoma","Pennsylvania"
-ggplot(subset(av.jobs,State %in% c("North Carolina","North Dakota","Ohio","Oklahoma","Pennsylvania")))+geom_line(aes(year,av.UR,group=State,colour=State))
+ggplot(subset(u,State %in% c("North Carolina","North Dakota","Ohio","Oklahoma","Pennsylvania")))+geom_line(aes(year,av.UR,group=State,colour=State))
 
-ggplot(subset(av.jobs,State %in% c("North Carolina","North Dakota","Ohio","Oklahoma","Pennsylvania")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
+ggplot(subset(u,State %in% c("North Carolina","North Dakota","Ohio","Oklahoma","Pennsylvania")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
 
 #"Rhode Island","South Carolina","South Dakota","Tennessee","Texas"
-ggplot(subset(av.jobs,State %in% c("Rhode Island","South Carolina","South Dakota","Tennessee","Texas")))+geom_line(aes(year,av.UR,group=State,colour=State))
+ggplot(subset(u,State %in% c("Rhode Island","South Carolina","South Dakota","Tennessee","Texas")))+geom_line(aes(year,av.UR,group=State,colour=State))
 
-ggplot(subset(av.jobs,State %in% c("Rhode Island","South Carolina","South Dakota","Tennessee","Texas")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
+ggplot(subset(u,State %in% c("Rhode Island","South Carolina","South Dakota","Tennessee","Texas")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
 
 #"Vermont","Virginia","West Virginia","Wisconsin"
-ggplot(subset(av.jobs,State %in% c("Vermont","Virginia","West Virginia","Wisconsin")))+geom_line(aes(year,av.UR,group=State,colour=State))
+ggplot(subset(u,State %in% c("Vermont","Virginia","West Virginia","Wisconsin")))+geom_line(aes(year,av.UR,group=State,colour=State))
 
-ggplot(subset(av.jobs,State %in% c("Vermont","Virginia","West Virginia","Wisconsin")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
+ggplot(subset(u,State %in% c("Vermont","Virginia","West Virginia","Wisconsin")))+geom_line(aes(year,log10(av.cases),group=State,colour=State))
+
+```
+
+#Univeriate predictor plots
+```{r}
+ggplot(ld.pres.total,aes(x=log10(prcp),y=log10(cases)))+geom_point(data=subset(ld.pres.total,year==2000,stat=identity))
+
+ggplot(ld.pres.total,aes(x=log10(prcp),y=log10(cases)))+geom_point(data=subset(ld.pres.total,year==2008,stat=identity))
+
+ggplot(ld.pres.total,aes(x=log10(prcp),y=log10(cases)))+geom_point(data=subset(ld.pres.total,year==2009,stat=identity))+geom_smooth()
+#Deer
+ggplot(ld.pres.total,aes(x=(DeerDensityMax),y=log10(cases),group=DeerDensityMax))+geom_boxplot()
+ggplot(ld.pres.total,aes(x=(DeerDensityMode),y=log10(cases),group=DeerDensityMode))+geom_boxplot()
+
+#Population: As population increase so do cases
+ld.pop.edit<-inner_join(ld.pop,ld.pres.total)
+
+ggplot(ld.pop.edit,aes(x=log10(pop),y=cases))+geom_point(data=subset(ld.pop.edit,year==2005,stat=identity))+geom_smooth()
+
+ggplot(ld.pop.edit,aes(x=log10(pop),y=log10(cases)))+geom_point(data=subset(ld.pop.edit,year==2009,stat=identity))+geom_smooth()
+
+ggplot(ld.pop.edit,aes(x=log10(pop),y=log10(cases)))+geom_point(data=subset(ld.pop.edit,year==2008,stat=identity))+geom_smooth()
+
+#Temperature
+
+ggplot(ld.pres.total,aes(x=log10(avtemp),y=log10(cases)))+geom_point(data=subset(ld.pres.total,year==2009,stat=identity))+geom_smooth()
+
+ggplot(ld.pres.total,aes(x=log10(avtemp),y=log10(cases)))+geom_point(data=subset(ld.pres.total,year==2008,stat=identity))+geom_smooth()
+
+ggplot(ld.pres.total,aes(x=log10(avtemp),y=log10(cases)))+geom_point(data=subset(ld.pres.total,year==2005,stat=identity))+geom_smooth()
+
+ggplot(ld.pres.total,aes(x=log10(avtemp),y=log10(cases)))+geom_point(data=subset(ld.pres.total,year==2006,stat=identity))+geom_smooth()
+
+```
+
+##Incidence plots
+
+```{r}
+#Unemployment Rate 
+ggplot(z_big,aes(x=av.UR,y=incidence))+geom_point(aes(col=as.factor(year)))+geom_smooth(method="lm")
+
+x<-ld.pop.edit %>% group_by(State,year) %>% summarize(tot.cases=sum(cases),av.prcp=mean(prcp),av.temp=mean(avtemp),min.temp=mean(mintmp),max.temp=mean(maxtmp),tot.pop=sum(pop),av.deermax=mean(DeerDensityMax),av.deermode=mean(DeerDensityMode)) %>% mutate(incidence=(100000*(tot.cases/tot.pop)))
+
+x_big<- x %>% filter(incidence>=5)
+
+#Precipitation: more precipitation, higher incidence; 2012-2013 have mid level rainfall with highest incidence--> result of other variable?
+ggplot(x_big,aes(x=av.prcp,y=incidence))+geom_point(aes(col=as.factor(year)))+geom_smooth(method="lm")
+
+ggplot(x_big,aes(x=av.prcp,y=incidence))+geom_point(data=subset(x_big,year==2012),aes(col=as.factor(State)))+geom_smooth(method=lm)
+
+#Temperature: average max temp has most negative relationship; higher the maximum temperature the lower the incidence 
+ggplot(x_big,aes(x=av.temp,y=incidence))+geom_point(aes(col=as.factor(year)))+geom_smooth(method="lm")
+
+ggplot(x_big,aes(x=min.temp,y=incidence))+geom_point(aes(col=as.factor(year)))+geom_smooth(method="lm")
+
+ggplot(x_big,aes(x=max.temp,y=incidence))+geom_point(aes(col=as.factor(year)))+geom_smooth(method="lm")
+
+
 
 ```
