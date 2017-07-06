@@ -170,7 +170,7 @@ ld %<>% select(-c(STCODE,CTYCODE,str_year))
 
 ##Merge all data frames
 
-```{r}
+```{r,eval=F}
 #Join prism prcp and avtmp with ld 
 ld.total<-inner_join(ld,prism)
 #Join with mintemp and rename av column to mintmp
@@ -179,8 +179,14 @@ names(ld.total)[names(ld.total) == 'av'] <- 'mintmp'
 #Join with maxtemp and rename av column to maxtmp
 ld.total<-inner_join(ld.total,maxtemp)
 names(ld.total)[names(ld.total) == 'av'] <- 'maxtmp'
+
+```
+
+```{r}
 #Join with pop
 ld.pop<-inner_join(ld.total,pop)
+ld.pop$state_name<-NULL
+
 
 ## CENSES data only goes until 2014, so obs go from 49744 to 46630
 
@@ -747,7 +753,7 @@ z %<>% rename(State=state_name)
 z <- inner_join(z,u)
 z %<>% mutate(incidence=(100000*(tot.cases/tot.pop)))
 
-z_big <- z %>% filter(incidence>=0.3)
+z_big <- z %>% filter(incidence>=5)
 
 ```
 
@@ -818,11 +824,11 @@ ggplot(subset(u,State %in% c("Vermont","Virginia","West Virginia","Wisconsin")))
 
 #Univeriate predictor plots
 ```{r}
-ggplot(ld.pres.total,aes(x=log10(prcp),y=log10(cases)))+geom_point(data=subset(ld.pres.total,year==2000,stat=identity))
+ggplot(ld.pres.total,aes(x=log10(prcp),y=log10(cases+1)))+geom_point(data=subset(ld.pres.total,year==2000,stat=identity))
 
-ggplot(ld.pres.total,aes(x=log10(prcp),y=log10(cases)))+geom_point(data=subset(ld.pres.total,year==2008,stat=identity))
+ggplot(ld.pres.total,aes(x=log10(prcp),y=log10(cases+1)))+geom_point(data=subset(ld.pres.total,year==2008,stat=identity))
 
-ggplot(ld.pres.total,aes(x=log10(prcp),y=log10(cases)))+geom_point(data=subset(ld.pres.total,year==2009,stat=identity))+geom_smooth()
+ggplot(ld.pres.total,aes(x=log10(prcp),y=log10(cases+1)))+geom_point(data=subset(ld.pres.total,year==2009,stat=identity))+geom_smooth(method="lm")
 #Deer
 ggplot(ld.pres.total,aes(x=(DeerDensityMax),y=log10(cases),group=DeerDensityMax))+geom_boxplot()
 ggplot(ld.pres.total,aes(x=(DeerDensityMode),y=log10(cases),group=DeerDensityMode))+geom_boxplot()
@@ -830,21 +836,21 @@ ggplot(ld.pres.total,aes(x=(DeerDensityMode),y=log10(cases),group=DeerDensityMod
 #Population: As population increase so do cases
 ld.pop.edit<-inner_join(ld.pop,ld.pres.total)
 
-ggplot(ld.pop.edit,aes(x=log10(pop),y=cases))+geom_point(data=subset(ld.pop.edit,year==2005,stat=identity))+geom_smooth()
+ggplot(ld.pop.edit,aes(x=log10(pop),y=log10(cases+1)))+geom_point(data=subset(ld.pop.edit,year==2005,stat=identity))+geom_smooth(method="lm")
 
-ggplot(ld.pop.edit,aes(x=log10(pop),y=log10(cases)))+geom_point(data=subset(ld.pop.edit,year==2009,stat=identity))+geom_smooth()
+ggplot(ld.pop.edit,aes(x=log10(pop),y=log10(cases+1)))+geom_point(data=subset(ld.pop.edit,year==2009,stat=identity))+geom_smooth(method="lm")
 
-ggplot(ld.pop.edit,aes(x=log10(pop),y=log10(cases)))+geom_point(data=subset(ld.pop.edit,year==2008,stat=identity))+geom_smooth()
+ggplot(ld.pop.edit,aes(x=log10(pop),y=log10(cases+1)))+geom_point(data=subset(ld.pop.edit,year==2008,stat=identity))+geom_smooth(method="lm")
 
 #Temperature
 
-ggplot(ld.pres.total,aes(x=log10(avtemp),y=log10(cases)))+geom_point(data=subset(ld.pres.total,year==2009,stat=identity))+geom_smooth()
+ggplot(ld.pres.total,aes(x=log10(avtemp),y=log10(cases+1)))+geom_point(data=subset(ld.pres.total,year==2009,stat=identity))+geom_smooth(method="lm")
 
-ggplot(ld.pres.total,aes(x=log10(avtemp),y=log10(cases)))+geom_point(data=subset(ld.pres.total,year==2008,stat=identity))+geom_smooth()
+ggplot(ld.pres.total,aes(x=log10(avtemp),y=log10(cases+1)))+geom_point(data=subset(ld.pres.total,year==2008,stat=identity))+geom_smooth(method="lm")
 
-ggplot(ld.pres.total,aes(x=log10(avtemp),y=log10(cases)))+geom_point(data=subset(ld.pres.total,year==2005,stat=identity))+geom_smooth()
+ggplot(ld.pres.total,aes(x=log10(avtemp),y=log10(cases+1)))+geom_point(data=subset(ld.pres.total,year==2005,stat=identity))+geom_smooth(method="lm")
 
-ggplot(ld.pres.total,aes(x=log10(avtemp),y=log10(cases)))+geom_point(data=subset(ld.pres.total,year==2006,stat=identity))+geom_smooth()
+ggplot(ld.pres.total,aes(x=log10(avtemp),y=log10(cases+1)))+geom_point(data=subset(ld.pres.total,year==2006,stat=identity))+geom_smooth(method="lm")
 
 ```
 
@@ -870,6 +876,95 @@ ggplot(x_big,aes(x=min.temp,y=incidence))+geom_point(aes(col=as.factor(year)))+g
 
 ggplot(x_big,aes(x=max.temp,y=incidence))+geom_point(aes(col=as.factor(year)))+geom_smooth(method="lm")
 
+#Deer
+ggplot(data=subset(x_big,year==2000:2007),aes(av.deermax,incidence))+geom_boxplot(aes(col=as.factor(year)))
+
+```
+## GGPairs data visualization: from lyme_modeling example
+```{r}
+library(GGally)
+
+#Big picture correlations
+
+ggpairs(ld.jobs.total,columns = c("cases","prcp","avtemp","UnemploymentRate"))
+
+#Combine all thinned out dataframes
+all_av<-inner_join(x,z)
+
+ggpairs(x,columns=c("tot.cases","av.prcp","av.temp","tot.pop"))
+
+x %<>% mutate(log10totpop=log10(tot.pop))
+x %<>% mutate(log10totcases=log10(tot.cases + 1))
+
+ggpairs(x,columns=c("log10totpop","log10totcases","av.prcp","av.temp"))
+
+all_av%<>% mutate(log10totpop=log10(tot.pop))
+all_av%<>% mutate(log10totcases=log10(tot.cases + 1))
+all_av %<>% mutate(log10in=log10(incidence+1))
+ggpairs(all_av,columns=c("log10in","av.prcp","av.UR","av.temp"))
+
+lm_UR_in<-lm(av.UR ~ log10in, data=all_av)
+summary(lm_UR_in)
+
+#The modelr package: nesting method of organization is useful for explanatory modeling
+by_state<-ld.pop.edit %>% group_by(State)
+by_state %<>% nest
+
+#Write a function that takes a data frame as its argument and returns a liner model object that predicts size by year
+linGrowth_model<-function(df){
+  lm(pop ~ year, data = df)
+}
+
+#State-wise statistical modeling exercise
+models<-purrr::map(by_state$data,linGrowth_model)
+
+#Add a column to the by_state df, where each row(State) has its own model object
+by_state%<>%mutate(model=purrr::map(data,linGrowth_model))
+
+library(modelr)
+by_state%<>%mutate(resids=purrr::map2(data,model,add_residuals))
+
+#Write a function that accepts an obj of the type in the resids list and returns a sum of the absolute values
+
+sum_resids<-function(x){
+  sum(abs(x$resid))
+}
+by_state%<>%mutate(totalResid=purrr::map(resids,sum_resids))
+
+#Write a function that accepts a linear model and returns the slope
+get_slope<-function(model){
+  model$coefficients[2]
+}
+by_state%<>%mutate(slope=purrr::map(model,get_slope))
+
+#Un-nest residual and slope column so not in list format
+slopes<-unnest(by_state,slope)
+totalResids<-unnest(by_state,totalResid)
+
+#Plot growth rate for all states
+slopes%>%ggplot(aes(State,slope))+geom_point()+theme(axis.text.x = element_text(angle=90,hjust=1))
+
+#Plot total residuals for all states
+totalResids%>%ggplot(aes(State,totalResid))+geom_point()+theme(axis.text.x=element_text(angle=90,hjust=1))
+```
+
+```{r}
+##Use different data frame name
+
+by_state2 <- ld.pop.edit%>%group_by(State)%>%nest
+
+#Write a function that accepts an element of the by_state$data list-column and returns the spearman correlation coefficient between Lyme disease cases and precipitation
+
+runCor<-function(df){
+  suppressWarnings(cor.test(df$cases,df$prcp,method="spearman")$estimate)
+}
+
+by_state2%<>%mutate(spCor=purrr::map(data,runCor))
+
+spCors<-unnest(by_state2,spCor)
+spCors%<>%arrange(desc(spCor))
+spCors$State<-factor(spCors$State,levels=unique(spCors$State))
+ggplot(spCors,aes(State,spCor))+geom_point()+theme(axis.text.x = element_text(angle=90,hjust=1))
 
 
 ```
