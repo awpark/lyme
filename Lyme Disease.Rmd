@@ -1030,6 +1030,20 @@ gm4<-glmer(cases ~ DeerDensityMax + UnemploymentRate + (1|State)+(1|avtemp),data
 
 ```
 
+
+##GLMM practice
+```{r}
+library(lme4)
+
+
+gm_1<-glmer(cases ~ UnemploymentRate +prcp+ DeerDensityMax +avtemp+(1|State),data=ld.jobs.total,family=poisson)
+gm_2<-glmer(cases ~ prcp +DeerDensityMax+avtemp+(1|State),data=ld.jobs.total,family=poisson)
+gm_3<-glmer(cases ~ UnemploymentRate +prcp+ avtemp+(1|State),data=ld.jobs.total,family=poisson)
+gm_4<-glmer(cases ~ prcp+ avtemp+(1|State),data=ld.jobs.total,family=poisson)
+library(knitr)
+kable(anova(gm_1,gm_2,gm_3,gm_4))
+```
+
 ##Poster Presentation Outline
 
 ```{r}
@@ -1096,6 +1110,9 @@ ggplot(test,aes(av.temp,tot.cases))+geom_point(aes(col=as.factor(year)))+geom_sm
 
 ggplot(x_big,aes(av.temp,incidence))+geom_point(aes(col=as.factor(year)))+geom_smooth(method="lm")+labs(x="Average Temperature",y="Incidence",title="State Incidence vs. Average Temperature")
 
+ggplot(x_big,aes(av.temp,incidence))+geom_point(aes(col=as.factor(year)))+geom_smooth(method="lm",formula=y ~ poly(x, 2))+labs(x="Average Temperature",y="Incidence",title="State Incidence vs. Average Temperature")
+
+
 #Precipitation:Cases and incidence increase with increased precipitation
 ggplot(test,aes(av.prcp,tot.cases))+geom_point(aes(col=as.factor(year)))+geom_smooth(method="lm")+labs(x="Average Precipitation",y="Total Cases",title="US Case Counts vs. Average Precipitation")
 
@@ -1114,6 +1131,10 @@ ggplot(z_big,aes(x=av.UR,y=incidence))+geom_point(aes(col=as.factor(year)))+geom
 ggplot(x_big,aes(x=av.deermax,y=tot.cases,group=av.deermax))+geom_boxplot()+labs(x="Average Deer Density",y="Total Cases",title="Deer Density effect on State Case Counts")
 
 ggplot(x_big,aes(x=av.deermax,y=incidence,group=av.deermax))+geom_boxplot()+labs(x="Average Deer Density",y="Incidence",title="Deer Density effect on State Case Counts")
+
+ld.pres.total %<>% mutate(incidence=)
+
+ggplot(ld.pres.total,aes(x=(DeerDensityMode),y=log10(cases),group=DeerDensityMode))+geom_boxplot()
 
 ```
 
