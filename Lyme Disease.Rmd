@@ -833,6 +833,9 @@ ggplot(ld.pres.total,aes(x=log10(prcp),y=log10(cases+1)))+geom_point(data=subset
 ggplot(ld.pres.total,aes(x=(DeerDensityMax),y=log10(cases),group=DeerDensityMax))+geom_boxplot()
 ggplot(ld.pres.total,aes(x=(DeerDensityMode),y=log10(cases),group=DeerDensityMode))+geom_boxplot()
 
+
+ld.pres.total %>% filter(cases>0) %>% ggplot(.,aes(x=DeerDensityMode,y=log10(cases),group=DeerDensityMode))+geom_boxplot()
+
 #Population: As population increase so do cases
 ld.pop.edit<-inner_join(ld.pop,ld.pres.total)
 
