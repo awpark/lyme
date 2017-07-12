@@ -131,7 +131,7 @@ library(tidyr)
 library(magrittr)
 library(dplyr)
 
-pop %<>% select(fips,state_name,starts_with("pop2"))
+pop %<>% select(fips,state_name,county_name,starts_with("pop2"))
 pop %<>% gather(starts_with("pop2"),key="str_year",value="size") %>% na.omit
 pop %<>% mutate(year=gsub("pop","",str_year))
 pop %<>% mutate(year=as.numeric(year))
@@ -317,7 +317,7 @@ ld.tick$Presence_current<-ifelse(ld.tick$Presence_current%in%c(1,3),0,1)
 ##Do cases occur only where ticks are present?
 
 ```{r}
-ld.tick %>% filter(cases>0) %>% ggplot(aes(x=as.factor(Presence_current),y=cases))+geom_boxplot()+scale_y_log10()
+ld.tick %>% filter(cases>0) %>% ggplot(aes(x=as.factor(Presence_current),y=cases))+geom_boxplot()+scale_y_log10()+labs(x="Current Tick Presence",y="Cases",title="Do cases occur only where ticks are present?",caption="0=No ticks present || 1=Ticks present")
 
 ```
 
@@ -493,13 +493,16 @@ case.2<-unique(case.2)
 #[59] "Shenandoah,Virginia"       "Warren,Virginia"          
 #[61] "King,Washington"          
  
-ggplot(tmp1,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(tmp1$Presence_current==0,"red","black"),fill=ifelse(tmp1$av.cases>2,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)#Counties outlined in red and filled with gold have 0 tick presence but av.cases>2
+ggplot(tmp1,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(tmp1$Presence_current==0,"red","black"),fill=ifelse(tmp1$av.cases>2,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)+labs(x="Longitude",y="Latitude",title="Average Lyme Disease Cases per County",caption="Red outline= tick presence of 0 || Black outline= tick presence of 1
+                                                                                                                                                                                                                                    Gold fill=Average cases >2 || Blue fill= Average cases < 2")
+
+#Counties outlined in red and filled with gold have 0 tick presence but av.cases>2
 
 ```
 
 ##When do these cases occur?
 
-```{r}
+```{r,eval=F}
 
 tmp<-aggregate(ld.tick.county$prcp,by=list(ld.tick.county$SC,ld.tick.county$Presence_current,ld.tick.county$year,ld.tick.county$cases),FUN=mean)
 names(tmp)<-c("SC","Presence_current","year","cases","av.prcp")
@@ -610,7 +613,9 @@ cnames.1 <- aggregate(cbind(long, lat) ~ SC, data=case.1, FUN=function(x) mean(r
 
 cnames.2 <- aggregate(cbind(long, lat) ~ SC, data=case.2, FUN=function(x) mean(range(x)))
 
-ggplot(map.2000,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2000$SC %in% cnames.1$SC,"red","black"),fill=ifelse(map.2000$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)#If outlined in red than av.case>1 and tick presence=0
+ggplot(map.2000,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(map.2000$SC %in% cnames.1$SC,"red","black"),fill=ifelse(map.2000$cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)
+
+#If outlined in red than av.case>1 and tick presence=0
 
 ```
 
@@ -753,7 +758,7 @@ z %<>% rename(State=state_name)
 z <- inner_join(z,u)
 z %<>% mutate(incidence=(100000*(tot.cases/tot.pop)))
 
-z_big <- z %>% filter(incidence>=5)
+z_big <- z %>% filter(incidence>=20)
 
 ```
 
@@ -831,6 +836,7 @@ ggplot(ld.pres.total,aes(x=log10(prcp),y=log10(cases+1)))+geom_point(data=subset
 ggplot(ld.pres.total,aes(x=log10(prcp),y=log10(cases+1)))+geom_point(data=subset(ld.pres.total,year==2009,stat=identity))+geom_smooth(method="lm")
 #Deer
 ggplot(ld.pres.total,aes(x=(DeerDensityMax),y=log10(cases),group=DeerDensityMax))+geom_boxplot()
+
 ggplot(ld.pres.total,aes(x=(DeerDensityMode),y=log10(cases),group=DeerDensityMode))+geom_boxplot()
 
 #Population: As population increase so do cases
@@ -862,7 +868,7 @@ ggplot(z_big,aes(x=av.UR,y=incidence))+geom_point(aes(col=as.factor(year)))+geom
 
 x<-ld.pop.edit %>% group_by(State,year) %>% summarize(tot.cases=sum(cases),av.prcp=mean(prcp),av.temp=mean(avtemp),min.temp=mean(mintmp),max.temp=mean(maxtmp),tot.pop=sum(pop),av.deermax=mean(DeerDensityMax),av.deermode=mean(DeerDensityMode)) %>% mutate(incidence=(100000*(tot.cases/tot.pop)))
 
-x_big<- x %>% filter(incidence>=5)
+x_big<- x %>% filter(incidence>=20)
 
 #Precipitation: more precipitation, higher incidence; 2012-2013 have mid level rainfall with highest incidence--> result of other variable?
 ggplot(x_big,aes(x=av.prcp,y=incidence))+geom_point(aes(col=as.factor(year)))+geom_smooth(method="lm")
@@ -870,18 +876,22 @@ ggplot(x_big,aes(x=av.prcp,y=incidence))+geom_point(aes(col=as.factor(year)))+ge
 ggplot(x_big,aes(x=av.prcp,y=incidence))+geom_point(data=subset(x_big,year==2012),aes(col=as.factor(State)))+geom_smooth(method=lm)
 
 #Temperature: average max temp has most negative relationship; higher the maximum temperature the lower the incidence 
-ggplot(x_big,aes(x=av.temp,y=incidence))+geom_point(aes(col=as.factor(year)))+geom_smooth(method="lm")
+test<-x_big%>%group_by(year)%>%summarize(tot.cases=sum(tot.cases),av.temp=mean(av.temp),min.temp=mean(min.temp),max.temp=mean(max.temp),av.prcp=mean(av.prcp))
+
+ggplot(x_big,aes(x=av.temp,y=tot.cases))+geom_point(aes(col=as.factor(year)))+geom_smooth()
 
 ggplot(x_big,aes(x=min.temp,y=incidence))+geom_point(aes(col=as.factor(year)))+geom_smooth(method="lm")
 
-ggplot(x_big,aes(x=max.temp,y=incidence))+geom_point(aes(col=as.factor(year)))+geom_smooth(method="lm")
+ggplot(x_big,aes(x=max.temp,y=incidence))+geom_point(aes(col=as.factor(year)))+geom_smooth()
+
+ggplot(test,aes(av.temp,tot.cases))+geom_point(aes(col=as.factor(year)))+geom_smooth(method="lm")+labs(x="Average Temperature",y="Total Cases",title="US Case Counts vs. Average Temperature")
 
 #Deer
 ggplot(data=subset(x_big,year==2000:2007),aes(av.deermax,incidence))+geom_boxplot(aes(col=as.factor(year)))
 
 ```
 ## GGPairs data visualization: from lyme_modeling example
-```{r}
+```{r,eval=F}
 library(GGally)
 
 #Big picture correlations
@@ -948,7 +958,7 @@ slopes%>%ggplot(aes(State,slope))+geom_point()+theme(axis.text.x = element_text(
 totalResids%>%ggplot(aes(State,totalResid))+geom_point()+theme(axis.text.x=element_text(angle=90,hjust=1))
 ```
 
-```{r}
+```{r,eval=F}
 ##Use different data frame name
 
 by_state2 <- ld.pop.edit%>%group_by(State)%>%nest
@@ -968,3 +978,139 @@ ggplot(spCors,aes(State,spCor))+geom_point()+theme(axis.text.x = element_text(an
 
 
 ```
+
+##Total cases and incidence county-based heat maps
+
+```{r}
+
+heat<- inner_join(ld.tick.county,pop)
+heat<-heat %<>% group_by(SC) %<>% summarize(tot.cases=sum(cases),tot.pop=sum(pop),av.cases=mean(cases))%<>% mutate(incidence=(100000*(tot.cases/tot.pop)))
+
+heat<-inner_join(heat,county_map,by="SC")
+heat<-heat%<>%filter(tot.cases>0)
+
+##How to change legend name?
+ggplot(data=heat,aes(long,lat,group=group))+geom_polygon(data=heat,aes(fill=(tot.cases+1)))+scale_fill_gradientn(colours=rev(rainbow(7)),trans="log10")+labs(x="Longitude",y="Latitude",colours="Total Cases",title="County-based Lyme Disease Case Counts")
+
+ggplot(data=heat,aes(long,lat,group=group))+geom_polygon(data=heat,aes(fill=(incidence+1)))+scale_fill_gradientn(colours=rev(rainbow(7)),trans="log10")+labs(x="Longitude",y="Latitude",colours="Incidence",title="County-based Lyme Disease Incidence")
+
+```
+
+##Try adding terrain to maps
+```{r,eval=F}
+library(ggplot2)
+library(ggmap)
+library(maps)
+library(mapdata)
+
+maptmp<-make_bbox(lat=lat,lon=long,data=heat)
+maptmp1<-get_map(location=maptmp,source="google",maptype = "terrain")
+ggmap(maptmp1)
+
+```
+
+##GLMM practice
+```{r}
+library(lme4)
+
+#AIC=66805.8 
+gm1<-glmer(cases ~ UnemploymentRate + (1|prcp)+ (1|avtemp) ,data=ld.jobs.total,family=poisson)
+
+#AIC=66803.8
+gm2<-glmer(cases ~ UnemploymentRate + (1|avtemp) ,data=ld.jobs.total,family=poisson)
+
+#AIC=55666.6
+gm3<-glmer(cases ~ UnemploymentRate + (1|State)+ (1|avtemp),data=ld.jobs.total,family=poisson)
+
+#AIC=55618.6-->Best model
+gm4<-glmer(cases ~ DeerDensityMax + UnemploymentRate + (1|State)+(1|avtemp),data=ld.jobs.total,family=poisson)
+
+```
+
+##Poster Presentation Outline
+
+```{r}
+## Do cases occur only where ticks are present?
+ld.tick %>% filter(cases>0) %>% ggplot(aes(x=as.factor(Presence_current),y=cases))+geom_boxplot()+scale_y_log10()+labs(x="Current Tick Presence",y="Cases",title="Do cases occur only where ticks are present?",caption="0=No ticks present || 1=Ticks present")
+
+## Map visualization of presence spectrum vs. average cases:Counties outlined in red and filled with gold have 0 tick presence but av.cases>1. Average cases set at >1 to avoid zero-inflated case counties
+
+ggplot(tmp1,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(tmp1$Presence_current==0,"red","black"),fill=ifelse(tmp1$av.cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)+labs(x="Longitude",y="Latitude",title="Average Lyme Disease Cases per County",caption="Red outline= tick presence of 0 || Black outline= tick presence of 1
+                                                                                                                                                                                                                                    Gold fill=Average cases >1 || Blue fill= Average cases < 1")
+
+
+## So where exactly are these cases happening?--> From this we can see that the distribution of Lyme Disease occurence seems mostly random, which pushes us to understand the current geographic distribution of Lyme cases in tick present counties to further understand why these cases may be expanding to 
+ggplot(heat,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(heat$SC %in% cnames.1$SC,"red","gray40"),fill=ifelse(heat$av.cases>1,"gold","powderblue"))+scale_fill_continuous()+coord_map("polyconic")+geom_path(lwd=0.1)+labs(x="Longitude",y="Latitude",title="Counties with Cases>1 where Ticks aren't Present")
+
+## Specifically
+
+#[1] "Maricopa,Arizona"          "Pima,Arizona"             
+ #[3] "Alameda,California"        "Contra Costa,California"  
+ #[5] "Humboldt,California"       "Los Angeles,California"   
+ #[7] "Marin,California"          "Mendocino,California"     
+ #[9] "Nevada,California"         "Riverside,California"     
+#[11] "San Diego,California"      "San Francisco,California" 
+#[13] "San Mateo,California"      "Santa Barbara,California" 
+#[15] "Santa Clara,California"    "Santa Cruz,California"    
+#[17] "Sonoma,California"         "Marion,Indiana"           
+#[19] "Starke,Indiana"            "Johnson,Kansas"           
+#[21] "Allegan,Michigan"          "Kent,Michigan"            
+#[23] "Ottawa,Michigan"           "Washtenaw,Michigan"       
+#[25] "Clearwater,Minnesota"      "Lake,Minnesota"           
+#[27] "Polk,Minnesota"            "Douglas,Nebraska"         
+#[29] "Lancaster,Nebraska"        "Clark,Nevada"             
+#[31] "Washoe,Nevada"             "Cass,North Dakota"        
+#[33] "Grand Forks,North Dakota"  "Delaware,Ohio"            
+#[35] "Franklin,Ohio"             "Hamilton,Ohio"            
+#[37] "Montgomery,Ohio"           "Douglas,Oregon"           
+#[39] "Jackson,Oregon"            "Josephine,Oregon"         
+#[41] "Multnomah,Oregon"          "Allegheny,Pennsylvania"   
+#[43] "Armstrong,Pennsylvania"    "Beaver,Pennsylvania"      
+#[45] "Butler,Pennsylvania"       "Clarion,Pennsylvania"     
+#[47] "Fayette,Pennsylvania"      "Indiana,Pennsylvania"     
+#[49] "Lawrence,Pennsylvania"     "Mercer,Pennsylvania"      
+#[51] "Somerset,Pennsylvania"     "Washington,Pennsylvania"  
+#[53] "Westmoreland,Pennsylvania" "Brown,Texas"              
+#[55] "Frederick,Virginia"        "James City,Virginia"      
+#[57] "Pulaski,Virginia"          "Rockbridge,Virginia"      
+#[59] "Shenandoah,Virginia"       "Warren,Virginia"          
+#[61] "King,Washington"   
+
+## Total Lyme Disease case distribution map
+ggplot(data=heat,aes(long,lat,group=group))+geom_polygon(data=heat,aes(fill=(tot.cases+1)))+scale_fill_gradientn(colours=rev(rainbow(7)),trans="log10")+labs(x="Longitude",y="Latitude",colours="Total Cases",title="County-based Lyme Disease Case Counts")
+
+##Lyme Disease incidence distribution map
+#Incidence: Allows us to control for influxes in total case count due to differences in population. The number of cases per 100,000 people, if every county had 100,000 people this is how many of them would have contracted Lyme Disease
+
+ggplot(data=heat,aes(long,lat,group=group))+geom_polygon(data=heat,aes(fill=(incidence+1)))+scale_fill_gradientn(colours=rev(rainbow(7)),trans="log10")+labs(x="Longitude",y="Latitude",colours="Incidence",title="County-based Lyme Disease Incidence",caption="Incidence=100,000*(total cases/total population)")
+
+## So what factors can influence Lyme Disease distribution?
+test<-x_big%>%group_by(year)%>%summarize(tot.cases=sum(tot.cases),av.temp=mean(av.temp),min.temp=mean(min.temp),max.temp=mean(max.temp),av.prcp=mean(av.prcp),tot.pop=sum(tot.pop))%>%mutate(incidence=(100000*(tot.cases/tot.pop)))
+
+##Does data support previous research on Lyme disease general patterns?
+#Temperature (test is annual US averages from States > 250 total cases): Total cases increase with increasing temperature, Incidence decreases with increasing temperature
+ggplot(test,aes(av.temp,tot.cases))+geom_point(aes(col=as.factor(year)))+geom_smooth(method="lm")+labs(x="Average Temperature",y="Total Cases",title="US Case Counts vs. Average Temperature")
+
+ggplot(x_big,aes(av.temp,incidence))+geom_point(aes(col=as.factor(year)))+geom_smooth(method="lm")+labs(x="Average Temperature",y="Incidence",title="State Incidence vs. Average Temperature")
+
+#Precipitation:Cases and incidence increase with increased precipitation
+ggplot(test,aes(av.prcp,tot.cases))+geom_point(aes(col=as.factor(year)))+geom_smooth(method="lm")+labs(x="Average Precipitation",y="Total Cases",title="US Case Counts vs. Average Precipitation")
+
+ggplot(x_big,aes(av.prcp,incidence))+geom_point(aes(col=as.factor(year)))+geom_smooth(method="lm")+labs(x="Average Presipitation",y="Incidence",title="State Incidence vs. Average Temperature")
+
+##Although we have a general idea of environmental factors afffecting lyme disease, it is still unknown how socioeconic factors and common reservoir species density may affect distribution 
+
+#All 50 states Unemployment Rates follow the same trends
+ggplot(u,aes(x=year,y=av.UR,group=State,colour=State))+geom_line()+labs(x="Year",y="Average Unemployment Rate (%)",title="State Annual Unemployment Rates")
+
+#How does incidence relate to average unemployment rate?: As unemployment rate increases,incidence decreases
+ggplot(z_big,aes(x=av.UR,y=incidence))+geom_point(aes(col=as.factor(year)))+geom_smooth(method="lm")+labs(x="Average Unemployment Rate",y="Incidence",title="State Average Unemployment vs Incidence")
+
+#How does deer density effect incidence and total cases?
+
+ggplot(x_big,aes(x=av.deermax,y=tot.cases,group=av.deermax))+geom_boxplot()+labs(x="Average Deer Density",y="Total Cases",title="Deer Density effect on State Case Counts")
+
+ggplot(x_big,aes(x=av.deermax,y=incidence,group=av.deermax))+geom_boxplot()+labs(x="Average Deer Density",y="Incidence",title="Deer Density effect on State Case Counts")
+
+```
+
