@@ -502,7 +502,7 @@ ggplot(tmp1,aes(x=long,y=lat,group=group))+geom_polygon(col=ifelse(tmp1$Presence
 
 ##When do these cases occur?
 
-```{r,eval=F}
+```{r}
 
 tmp<-aggregate(ld.tick.county$prcp,by=list(ld.tick.county$SC,ld.tick.county$Presence_current,ld.tick.county$year,ld.tick.county$cases),FUN=mean)
 names(tmp)<-c("SC","Presence_current","year","cases","av.prcp")
